@@ -12,7 +12,7 @@ Vanguard utilizes a Hub-and-Spoke architecture written in Python 3.12+. The Scou
 * **ScoutCore**: A singleton class for configuration, registration, and persistence.
 * **Scouts**: Classes inheriting from a `BaseScout` template.
     ### 2.1 Contract Compliance
-All component communication and internal data structures must strictly adhere to the standards defined in _VAN_CONTRACT_DEFINITIONS. The ScoutCore persistence layer must utilize the VAN_PERSISTENCE_INTERFACE to ensure an 'Alpha-to-Beta' migration path (JSON to SQLite) without altering core logic.
+    All component communication and internal data structures must strictly adhere to the standards defined in _VAN_CONTRACT_DEFINITIONS. The ScoutCore persistence layer must utilize the VAN_PERSISTENCE_INTERFACE to ensure an 'Alpha-to-Beta' migration path (JSON to SQLite) without altering core logic.
 
 ## 3. DATA STORAGE & ATOMIC WRITE PROTOCOL
 * **Alpha Persistence**: Single-file `state.json`.
