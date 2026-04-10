@@ -1,4 +1,4 @@
-# VANGUARD: SYSTEM DESIGN DOCUMENT (TACTICAL)
+# VANGUARD: SYSTEM DESIGN DOCUMENT
 
 ## 1.0 SYSTEM ARCHITECTURE
 Vanguard utilizes a Hub-and-Spoke architecture written in Python 3.12+. The ScoutCore acts as the hub (orchestrator) and modular Scouts act as spokes (probes).
