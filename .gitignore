@@ -7,3 +7,4 @@ state.json.bak
 state.tmp
 docs/int/
 logs/
+.vscode/
