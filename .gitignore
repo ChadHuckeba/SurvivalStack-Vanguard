@@ -5,3 +5,5 @@ __pycache__/
 state.json
 state.json.bak
 state.tmp
+docs/int/
+logs/
