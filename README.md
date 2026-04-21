@@ -1,6 +1,6 @@
 # Vanguard
 
-Vanguard is a modular, agentic orchestration engine designed for high-fidelity lead retrieval, validation, and state management.
+Vanguard is a modular, agentic orchestration engine designed for high-fidelity data retrieval, validation, and state management.
 
 ## 🏗️ Architecture
 Vanguard operates on a "Hub-and-Spoke" model:
