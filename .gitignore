@@ -2,9 +2,8 @@
 .env
 __pycache__/
 *.pyc
-state.json
-state.json.bak
-state.tmp
+data/
+!data/.gitkeep
 docs/int/
 logs/
 .vscode/
