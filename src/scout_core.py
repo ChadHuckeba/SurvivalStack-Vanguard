@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
-from persistence_interface import JSONPersistence
+from persistence_interface import SQLitePersistence, JSONPersistence
 
 class ScoutCore:
     """
@@ -28,10 +28,12 @@ class ScoutCore:
         Ensures the local infrastructure exists for agnostic data storage.
         """
         self.root_dir = Path(__file__).parent.parent
-        self.state_path = self.root_dir / "data" / "state.json"
+        self.data_dir = self.root_dir / "data"
+        self.state_path = self.data_dir / "state.json"
+        self.db_path = self.data_dir / "vanguard.db"
         self.log_path = self.root_dir / "logs" / "system.log"
         
-        (self.root_dir / "data").mkdir(exist_ok=True)
+        self.data_dir.mkdir(exist_ok=True)
         (self.root_dir / "logs").mkdir(exist_ok=True)
         
         logging.basicConfig(
@@ -40,22 +42,32 @@ class ScoutCore:
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         
-        # Initialize persistence layer (Alpha: JSON)
-        self.persistence = JSONPersistence(self.state_path)
+        # Initialize persistence layer (Beta: SQLite)
+        self.persistence = SQLitePersistence(self.db_path)
         
-        # Load state through the persistence interface
-        self.state = self.persistence.load_state()
+        # Check for legacy data and migrate if necessary
+        if self.state_path.exists():
+            self._migrate_from_json()
+
+    def _migrate_from_json(self):
+        """Migrates legacy JSON state to SQLite."""
+        logging.info("Legacy state.json found. Initiating migration to SQLite...")
+        json_prov = JSONPersistence(self.state_path)
+        legacy_state = json_prov.load_state()
         
-        if self.state is None:
-            self.state = {
-                "state_metadata": {
-                    "version": "1.0",
-                    "last_updated": datetime.utcnow().isoformat() + "Z",
-                    "total_records": 0
-                },
-                "entities": {}
-            }
-            self._persist_state()
+        if legacy_state and "entities" in legacy_state:
+            for v_id, entry in legacy_state["entities"].items():
+                self.persistence.upsert_entry(entry)
+            
+            # Backup the legacy file after successful migration
+            bak_path = self.state_path.with_suffix(".json.migrated")
+            os.rename(self.state_path, bak_path)
+            logging.info(f"Migration complete. Legacy state moved to {bak_path}")
+
+    @property
+    def state(self):
+        """Legacy compatibility property for state access."""
+        return self.persistence.load_state()
 
     def _sanitize_url(self, raw_url: str) -> str:
         """
@@ -74,29 +86,11 @@ class ScoutCore:
         input_string = f"{sanitized_url}{entity_label}".strip().lower()
         return hashlib.sha256(input_string.encode()).hexdigest()
 
-    def _persist_state(self):
-        """
-        Delegates state persistence to the registered interface.
-        Follows the Hub-and-Spoke DAO pattern defined in the SDD.
-        """
-        self.state["state_metadata"]["last_updated"] = datetime.utcnow().isoformat() + "Z"
-        self.persistence.save_state(self.state)
-
     def upsert_record(self, record_data: dict):
         """
         Ingest an entity record or update an existing entry.
         Tracks global hit counts and temporal metadata for the record.
         """
-        v_id = record_data.get("vanguard_id")
-        
-        if v_id in self.state["entities"]:
-            self.state["entities"][v_id]["metadata"]["last_seen"] = \
-                datetime.utcnow().isoformat() + "Z"
-            self.state["entities"][v_id]["metadata"]["hit_count"] += 1
-        else:
-            self.state["entities"][v_id] = record_data
-            self.state["state_metadata"]["total_records"] += 1
-            
-        self._persist_state()
+        self.persistence.upsert_entry(record_data)
 
 core_engine = ScoutCore()
