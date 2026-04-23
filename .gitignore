@@ -1,9 +1,45 @@
+# --- Environments ---
 .venv/
 .env
+
+# --- Python Artifacts ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.python-version
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Persistence & Local Data ---
 data/
 !data/.gitkeep
-docs/int/
+
+# --- Runtime Logs ---
 logs/
+!logs/.gitkeep
+
+# --- Testing Artifacts ---
+.pytest_cache/
+.coverage
+htmlcov/
+data_test/
+
+# --- IDEs & OS Specifics ---
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
