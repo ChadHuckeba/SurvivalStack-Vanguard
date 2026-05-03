@@ -1,0 +1,43 @@
+Proprietary Logic Framework
+
+1.0 IP Protection and Data Sovereignty
+Confidentiality: This document contains the core intellectual property of SurvivalStack.
+Functional Abstraction: Documentation intended for broad AI processing must define Inputs and Outputs only; specific weights and formulas in this file must remain isolated.
+Leakage Prevention: System Architects and LLM instances are strictly forbidden from disclosing these specific numerical values in external-facing responses.
+Credential Isolation: Logic thresholds and proprietary weights must never be committed to version control; use environment variables exclusively.
+
+2.0 MVDV: Multi-Vector Data Validation
+This section defines the heuristics used to calculate the Integrity Score (0.0 to 1.0) to identify Ghost Jobs.
+A. Age Vector (V_age)
+Logic: Proximity of "Date Posted" to current system time.
+Formula:
+If Age is less than or equal to 7 days: V_age = 1.0.
+If Age is greater than 7 and less than or equal to 30 days: V_age = 1.0 - ((Age - 7) / 23).
+If Age is greater than 30 days: V_age = 0.0 (Triggers baseline 40% Ghost Probability).
+B. Frequency Vector (V_freq)
+Logic: Triggers a flag if the same vanguard_id appears in consecutive scrape cycles.
+Penalty: If hit_count is greater than 3 within 3 consecutive 30-day cycles, apply a 0.5x multiplier to the total Integrity Score.
+C. Metadata Vector (V_meta)
+Logic: Verifies employer domains and structural integrity.
+Red Flag Penalties:
+Domain Mismatch: -0.3 penalty if the listing does not exist on the hiring company's official Careers page.
+Templated Content: -0.2 penalty for generic descriptions lacking specific team identifiers or project details.
+D. Composite Integrity Score
+Calculation: (V_age * 0.3) + (V_freq * 0.5) + (V_meta * 0.2).
+Threshold: If Total Score is less than 0.4, set is_ghost_job to TRUE and set Disposition to "Expired".
+
+3.0 Semantic Alignment Logic
+This section defines the methodology for high-fidelity gap analysis between user profiles and leads.
+A. Core Requirement Extraction
+Process: Identify "Hard Skills" (Languages, Frameworks) and "Domain Expertise" required by the lead.
+B. Experience Delta
+Calculation: Experience_Delta = (Candidate_Years_Experience / Lead_Required_Years).
+Constraint: Score caps at 1.0; values below 0.7 trigger a "Seniority Gap" flag.
+C. Alignment Score
+Calculation: Average of (Skill_Match_Rate + Experience_Delta + Seniority_Match).
+
+4.0 System Thresholds and Automation Triggers
+Ghost Job Probability: Any lead with an integrity_score below 0.4 is categorized as a "Ghost Job".
+State Decay: Leads with a last_seen timestamp older than 30 days automatically transition to Expired.
+Deduplication: SHA-256 hash of URL and Title must be verified against state.json before any logic execution.
+
