@@ -6,6 +6,28 @@ Vanguard utilizes a Hub-and-Spoke architecture written in Python 3.12+. The Scou
 * **PEP 484**: Mandatory Type Hinting for all signatures to ensure self-documentation.
 * **Traceability**: Complex logic must reference VAN_SDD or VAN_CORE_LOGIC in code comments.
 
+### 1.1 System Component Map
+```mermaid
+graph TD
+    User[User/CLI] -->|Initialize| Core[ScoutCore]
+    
+    subgraph Orchestration_Layer
+        Core -->|Config| Env[.env/YAML]
+        Core -->|Manage| Registry[Scout Registry]
+    end
+
+    subgraph Data_Acquisition_Layer
+        Registry --> Scout1[JobSearchScout]
+        Registry --> Scout2[Future_Scout_X]
+        Scout1 --> Adapter[JobSpy Adapter]
+    end
+
+    subgraph Persistence_Layer
+        Core --> State[state.json / vanguard.db]
+        Core --> Logs[system.log]
+    end
+```
+
 ## 2.0 PRODUCT ROADMAP
 
 ### Phase 1: Foundation (Alpha)
