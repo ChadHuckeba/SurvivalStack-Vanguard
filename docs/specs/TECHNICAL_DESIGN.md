@@ -54,3 +54,31 @@ Vanguard utilizes a Hub-and-Spoke architecture written in Python 3.12+. The Scou
 * **PII Encryption**: Local profiles must be encrypted at rest using Fernet; keys are isolated in `.env`.
 * **Jitter Protocol**: Randomized delays of 15–45 seconds between requests.
 * **Exponential Backoff**: Minimum 4-hour session termination upon 429 errors.
+
+## 7.0 SYSTEM FLOWS
+
+### 7.1 Lead Processing Sequence
+This diagram details the lifecycle of a single lead, from initial discovery by a Scout to persistent storage by the Core.
+
+```mermaid
+sequenceDiagram
+    participant S as JobSearchScout
+    participant V as MVDV_Logic
+    participant C as ScoutCore
+    participant DB as Persistence (SQL/JSON)
+
+    Note over S,V: Lead Discovery Phase
+    S->>S: Query Source (JobSpy)
+    S->>V: Pass Lead for Multi-Vector Validation
+    
+    Note over V: Integrity Scoring
+    V->>V: Apply Age/Frequency Heuristics
+    
+    alt Integrity > Threshold
+        V->>C: Return Validated Result
+        C->>C: Check for Duplicate UUID
+        C->>DB: Update State (vanguard.db / state.json)
+    else Integrity < Threshold
+        V->>S: Flag as Noise (Discard)
+    end
+```
