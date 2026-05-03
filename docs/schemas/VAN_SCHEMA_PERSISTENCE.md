@@ -40,6 +40,10 @@ last_seen
 DATETIME
 DEFAULT CURRENT_TIMESTAMP
 Timestamp of most recent discovery or refresh.
+hit_count
+INTEGER
+DEFAULT 1
+Cumulative count of times this entry has been discovered.
 status
 TEXT
 DEFAULT 'active'
@@ -88,6 +92,7 @@ CREATE TABLE IF NOT EXISTS entries (
     entry_data TEXT NOT NULL,
     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    hit_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'active'
 );
 
