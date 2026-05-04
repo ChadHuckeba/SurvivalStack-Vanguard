@@ -1,0 +1,24 @@
+# VANGUARD: JOBSPY SCOUT CONFIGURATION
+# Specific tuning for the JobSpy research bridge.
+
+search_parameters:
+  term: "Software Engineer"
+  results_wanted: 30
+  hours_old: 72
+  sites: ["linkedin", "indeed", "glassdoor", "zip_recruiter"]
+
+location_logic:
+  # Priority 1: Global Remote
+  remote_allowed: true
+  
+  # Priority 2/3: Austin Metroplex (Hybrid/In-Office)
+  target_metro: "Austin, TX"
+  metro_radius_miles: 35
+  allow_hybrid_in_metro: true
+  allow_office_in_metro: true
+
+relocation_heuristics:
+  # Indicators that suggest potential relocation support
+  keywords: ["relocation", "assistance", "sign-on bonus", "moving expenses", "visa sponsorship"]
+  company_size_threshold: "Large" # Heuristic: Larger companies are more likely to offer relo
+  min_salary_threshold: 120000   # Heuristic: Higher-tier roles often include relo budgets

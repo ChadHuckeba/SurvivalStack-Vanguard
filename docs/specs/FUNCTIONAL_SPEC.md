@@ -3,8 +3,8 @@
 ## 1. INTRODUCTION
 This document defines the functional requirements for the Vanguard platform, specifically the ScoutCore engine and the initial JobScout module. 
 
-### 1.1 IMPLEMENTATION STANDARD
-While this document serves as the tactical representation for development and testing, the high-authority logic is governed by the Google Doc VAN_FSD. Discrepancies are resolved in favor of the Google Doc unless a 'Sync' trigger has officially promoted this version.
+### 1.1 IMPLEMENTATION AUTHORITY
+This repository serves as the high-authority source of truth for all Vanguard functional requirements and technical designs. Technical decisions must align with the documentation housed in `/docs`.
 
 ## 2. SYSTEM OVERVIEW
 Vanguard is a modular, agentic system composed of a central orchestration engine (ScoutCore) and domain-specific data probes (Scouts). The system utilizes a "pull" architecture to retrieve, validate, and store data leads.

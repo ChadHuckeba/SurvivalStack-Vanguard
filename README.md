@@ -1,6 +1,12 @@
 # Vanguard
 
-Vanguard is a modular, agentic orchestration engine designed for high-fidelity data retrieval, validation, and state management.
+Vanguard is an automated intelligence and data acquisition platform designed to identify high-fidelity Entries within high-entropy environments. By leveraging the ScoutCore service layer, Vanguard processes raw discoveries through Multi-Vector Data Validation (MVDV) and Semantic Alignment to ensure data integrity and relevance.
+
+## 🎯 Problem Statement
+The 2026 job market is characterized by significant data noise and market inefficiencies. Vanguard addresses:
+*   **Market Entropy**: Excessive volumes of automated applications and low-quality listings.
+*   **Integrity Deficits**: The prevalence of "Ghost Jobs" and inactive listings.
+*   **Manual Bottlenecks**: Time-intensive cross-referencing of company signals with hiring requirements.
 
 ## 🏗️ Architecture
 Vanguard operates on a "Hub-and-Spoke" model:
@@ -8,14 +14,14 @@ Vanguard operates on a "Hub-and-Spoke" model:
 * **Scouts**: Modular, domain-specific adapters used for data acquisition (e.g., JobScout).
 
 ## 📂 Project Structure
-* `/docs`: Technical specifications and functional baselines (Tactical Layer).
-* `/src`: Core implementation logic and persistence interfaces (Operational Layer).
+* `/docs`: Technical specifications, functional baselines, and project governance (Charter, Glossary).
+* `/src`: Core implementation logic and persistence interfaces.
 * `/tests`: Validation suites for engine and scout integrity.
 
 ## 🛠️ Tech Stack
 * **Language**: Python 3.12+
 * **Framework**: Modular Engine-Scout Architecture
-* **Standards**: SemVer 0.x.y, Conventional Commits, PEP 8 Compliance
+* **Standards**: Bootstrap-First, SemVer 0.x.y, Conventional Commits, PEP 8/484/257 Compliance
 
 ---
-*Note: This repository houses the Tactical and Operational layers of the Vanguard project. Internal strategic documentation is maintained privately.*
+*Note: This repository is the high-authority source of truth for the Vanguard project.*

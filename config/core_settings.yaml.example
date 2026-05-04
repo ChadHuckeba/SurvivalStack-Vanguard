@@ -1,0 +1,12 @@
+# VANGUARD: CORE SYSTEM SETTINGS
+# Global parameters governing MVDV heuristics and persistence.
+
+persistence:
+  db_name: "vanguard.db"
+  backup_retention_days: 7
+
+mvdv_global:
+  min_integrity_score: 0.7
+  ghost_job_filters:
+    max_days_posted: 60
+    min_description_length: 500
