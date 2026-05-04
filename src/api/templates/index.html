@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanguard | Lens Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+        .inspector-active { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen">
+    
+    <nav class="border-b border-slate-800 bg-[#0f172a]/80 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-shield-halved text-white text-sm"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight">VANGUARD <span class="text-blue-500 font-medium">LENS</span></span>
+            </div>
+            <div class="flex items-center gap-6">
+                <div id="stats" class="text-sm text-slate-400 flex gap-4">
+                    <span>Total Leads: <span id="total-count" class="text-white font-mono">0</span></span>
+                </div>
+                <button onclick="fetchLeads()" class="p-2 hover:bg-slate-800 rounded-lg transition-colors">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-[1600px] mx-auto p-6 flex gap-6 h-[calc(100vh-64px)] overflow-hidden">
+        
+        <!-- Sidebar / Filters -->
+        <aside class="w-64 flex-shrink-0 flex flex-col gap-6">
+            <div class="space-y-4">
+                <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filter by Scout</h3>
+                <select id="provider-filter" onchange="filterLeads()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <option value="all">All Providers</option>
+                </select>
+            </div>
+            
+            <div class="space-y-4">
+                <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Relo Probability</h3>
+                <input type="range" id="relo-filter" min="0" max="100" value="0" oninput="filterLeads()" class="w-full accent-blue-500">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+
+            <div class="mt-auto p-4 bg-slate-900/50 rounded-xl border border-slate-800 text-xs text-slate-400">
+                <p><i class="fas fa-info-circle mr-2"></i> Click a row to inspect the raw JSON payload and metadata.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content (Table) -->
+        <section class="flex-grow flex flex-col gap-4 overflow-hidden">
+            <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden flex flex-col flex-grow">
+                <div class="overflow-y-auto flex-grow scrollbar-hide">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-950 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Job Title</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Company</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Location</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 text-center">Relo Prob</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body" class="divide-y divide-slate-800/50">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inspector (Right Side) -->
+        <aside id="inspector" class="w-[500px] flex-shrink-0 bg-slate-950 border-l border-slate-800 hidden flex flex-col overflow-hidden transition-all duration-300">
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="text-lg font-bold">Payload Inspector</h2>
+                <button onclick="closeInspector()" class="text-slate-500 hover:text-white transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="inspector-content" class="p-6 overflow-y-auto font-mono text-xs leading-relaxed text-blue-300">
+                <!-- JSON Payload -->
+            </div>
+        </aside>
+
+    </main>
+
+    <script>
+        let allLeads = [];
+        let filteredLeads = [];
+        let selectedId = null;
+
+        async function fetchLeads() {
+            try {
+                const res = await fetch('/api/leads');
+                allLeads = await res.json();
+                populateFilters();
+                updateStats();
+                filterLeads();
+            } catch (err) {
+                console.error("Failed to fetch leads", err);
+            }
+        }
+
+        function populateFilters() {
+            const providers = [...new Set(allLeads.map(l => l.source_info?.scout || "unknown"))];
+            const select = document.getElementById('provider-filter');
+            select.innerHTML = '<option value="all">All Providers</option>';
+            providers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('total-count').textContent = allLeads.length;
+        }
+
+        function filterLeads() {
+            const provider = document.getElementById('provider-filter').value;
+            const minRelo = document.getElementById('relo-filter').value / 100;
+
+            filteredLeads = allLeads.filter(l => {
+                const matchesProvider = provider === 'all' || (l.source_info?.scout === provider);
+                const matchesRelo = (l.content?.vanguard_relo_probability || 0) >= minRelo;
+                return matchesProvider && matchesRelo;
+            });
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('leads-table-body');
+            tbody.innerHTML = '';
+
+            filteredLeads.forEach(lead => {
+                const tr = document.createElement('tr');
+                tr.className = `group hover:bg-slate-800/50 cursor-pointer transition-colors ${selectedId === lead.vanguard_id ? 'inspector-active bg-slate-800/80' : ''}`;
+                tr.onclick = () => inspectLead(lead);
+
+                const relo = lead.content?.vanguard_relo_probability || 0;
+                let reloColor = 'bg-slate-800 text-slate-500';
+                if (relo >= 0.7) reloColor = 'bg-green-500/10 text-green-500 border border-green-500/20';
+                else if (relo >= 0.3) reloColor = 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-slate-100">${lead.content?.title || 'Unknown'}</td>
+                    <td class="px-6 py-4 text-slate-400 text-sm">${lead.content?.company || 'N/A'}</td>
+                    <td class="px-6 py-4 text-slate-500 text-sm">${lead.content?.location || 'Remote'}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${reloColor}">
+                            ${Math.round(relo * 100)}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-500 text-[10px] font-mono">${lead.metadata?.last_seen?.split('T')[0] || 'Unknown'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function inspectLead(lead) {
+            selectedId = lead.vanguard_id;
+            renderTable(); // Update active state
+            
+            const inspector = document.getElementById('inspector');
+            const content = document.getElementById('inspector-content');
+            
+            content.innerHTML = `<pre class="whitespace-pre-wrap">${JSON.stringify(lead, null, 4)}</pre>`;
+            inspector.classList.remove('hidden');
+        }
+
+        function closeInspector() {
+            selectedId = null;
+            document.getElementById('inspector').classList.add('hidden');
+            renderTable();
+        }
+
+        // Init
+        fetchLeads();
+    </script>
+</body>
+</html>

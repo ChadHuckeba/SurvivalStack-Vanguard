@@ -1,2 +1,5 @@
 python-jobspy
 pandas
+fastapi
+uvicorn
+jinja2
