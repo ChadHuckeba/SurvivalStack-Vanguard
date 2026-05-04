@@ -18,13 +18,13 @@ class JobSpyScout(BaseScout):
     
     def __init__(self, config_path: Optional[str] = None):
         """
-        Initialize with config file path. Defaults to config/scout_settings.yaml.
+        Initialize with config file path. Defaults to config/scouts/jobspy.yaml.
         """
         super().__init__(scout_name="JobSpyScout", target_source="https://github.com/speedyapply/JobSpy")
         
         # Load Configuration
         self.root_dir = Path(__file__).parent.parent
-        config_path = config_path or self.root_dir / "config" / "scout_settings.yaml"
+        config_path = config_path or self.root_dir / "config" / "scouts" / "jobspy.yaml"
         with open(config_path, 'r') as f:
             self.settings = yaml.safe_load(f)
             
