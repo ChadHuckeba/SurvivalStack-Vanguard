@@ -154,12 +154,20 @@ class SQLitePersistence(PersistenceInterface):
                     provider_id TEXT NOT NULL,
                     identity_manifest TEXT NOT NULL,
                     entry_data TEXT NOT NULL,
+                    work_model TEXT DEFAULT 'unknown',
                     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
                     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
                     hit_count INTEGER DEFAULT 1,
                     status TEXT DEFAULT 'active'
                 );
             """)
+            
+            # Migration: Add work_model if it doesn't exist
+            cursor = conn.execute("PRAGMA table_info(entries)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if 'work_model' not in columns:
+                conn.execute("ALTER TABLE entries ADD COLUMN work_model TEXT DEFAULT 'unknown';")
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS enrichment (
                     vanguard_id TEXT PRIMARY KEY,
@@ -199,6 +207,7 @@ class SQLitePersistence(PersistenceInterface):
                 "source_url": source_url
             },
             "content": entry_data,
+            "work_model": res.get("work_model", "unknown"),
             "metadata": {
                 "first_seen": res["first_seen"],
                 "last_seen": res["last_seen"],
@@ -231,6 +240,9 @@ class SQLitePersistence(PersistenceInterface):
 
     def upsert_entry(self, entry_object: dict) -> bool:
         v_id = entry_object.get("vanguard_id")
+        work_model = entry_object.get("work_model") or \
+                     entry_object.get("content", {}).get("work_modality") or \
+                     "unknown"
         
         # Better provider_id extraction
         provider_id = entry_object.get("source_info", {}).get("scout") or \
@@ -270,17 +282,18 @@ class SQLitePersistence(PersistenceInterface):
                         last_seen = CURRENT_TIMESTAMP,
                         hit_count = hit_count + 1,
                         status = 'active',
-                        entry_data = ?
+                        entry_data = ?,
+                        work_model = ?
                     WHERE vanguard_id = ?
-                """, (entry_data, v_id))
+                """, (entry_data, work_model, v_id))
             else:
                 first_seen = incoming_first_seen if incoming_first_seen else datetime.utcnow().isoformat() + "Z"
                 last_seen = incoming_last_seen if incoming_last_seen else datetime.utcnow().isoformat() + "Z"
                 
                 conn.execute("""
-                    INSERT INTO entries (vanguard_id, provider_id, identity_manifest, entry_data, first_seen, last_seen, hit_count, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-                """, (v_id, provider_id, identity_manifest, entry_data, first_seen, last_seen, incoming_hit_count))
+                    INSERT INTO entries (vanguard_id, provider_id, identity_manifest, entry_data, work_model, first_seen, last_seen, hit_count, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+                """, (v_id, provider_id, identity_manifest, entry_data, work_model, first_seen, last_seen, incoming_hit_count))
             return True
 
     def query_entries(self, filter_criteria: dict = None) -> list:

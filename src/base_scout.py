@@ -27,13 +27,14 @@ class BaseScout(ABC):
         """
         pass
 
-    def report_entity(self, entity_label: str, raw_data: dict):
+    def report_entity(self, entity_label: str, raw_data: dict, work_model: str = "unknown"):
         """
         Standardized method to hand data back to the ScoutCore.
         
         Args:
             entity_label (str): The primary name/title of the entity found.
             raw_data (dict): The full payload of data discovered.
+            work_model (str): The work modality (onsite, hybrid, remote, unknown).
         """
         # Generate the unique Vanguard ID using the Hub's logic
         vanguard_id = core_engine.generate_vanguard_id(
@@ -48,6 +49,7 @@ class BaseScout(ABC):
                 "scout": self.scout_name,
                 "source_url": self.target_source
             },
+            "work_model": work_model,
             "content": raw_data,
             "metadata": {
                 "first_seen": datetime.utcnow().isoformat() + "Z",

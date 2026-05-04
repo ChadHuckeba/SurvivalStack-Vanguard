@@ -1,8 +1,13 @@
 from base_scout import BaseScout
 import logging
 import yaml
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
+from dotenv import load_dotenv
+
+# Load environment variables (USER_HOME_LOCATION)
+load_dotenv()
 
 try:
     from jobspy import scrape_jobs
@@ -31,6 +36,7 @@ class JobSpyScout(BaseScout):
         self.search_params = self.settings.get("search_parameters", {})
         self.loc_logic = self.settings.get("location_logic", {})
         self.relo_heuristics = self.settings.get("relocation_heuristics", {})
+        self.user_home = os.getenv("USER_HOME_LOCATION", "")
 
     def run(self):
         """
@@ -66,9 +72,10 @@ class JobSpyScout(BaseScout):
                 country_indeed='USA'
             )
             
-            for _, row in jobs.iterrows():
-                job_data = row.to_dict()
-                self._process_and_report(job_data)
+            if jobs is not None:
+                for _, row in jobs.iterrows():
+                    job_data = row.to_dict()
+                    self._process_and_report(job_data)
 
         except Exception as e:
             self.logger.error(f"Search pass failed: {str(e)}")
@@ -78,8 +85,11 @@ class JobSpyScout(BaseScout):
         entity_label = job_data.get("title", "Unknown Title")
         source_url = job_data.get("job_url", "unknown")
         
-        # Apply Relocation Heuristic
-        relo_prob = self._calculate_relo_probability(job_data)
+        # 1. Determine Work Model
+        work_model = self._determine_work_model(job_data)
+        
+        # 2. Apply Relocation Heuristic
+        relo_prob = self._calculate_relo_probability(job_data, work_model)
         job_data["vanguard_relo_probability"] = relo_prob
         
         # Cleanup data for storage
@@ -89,57 +99,65 @@ class JobSpyScout(BaseScout):
             elif isinstance(value, float) and (value != value):
                 job_data[key] = None
 
-        v_id = self._generate_custom_id(source_url, entity_label)
-        
-        record_packet = {
-            "vanguard_id": v_id,
-            "source_info": {
-                "scout": self.scout_name,
-                "source_url": source_url,
-                "aggregator": "jobspy"
-            },
-            "content": job_data,
-            "metadata": {
-                "first_seen": self._get_timestamp(),
-                "last_seen": self._get_timestamp(),
-                "hit_count": 1
-            }
-        }
-        
-        from scout_core import core_engine
-        core_engine.upsert_record(record_packet)
+        # 3. Report using BaseScout interface
+        self.report_entity(
+            entity_label=entity_label,
+            raw_data=job_data,
+            work_model=work_model
+        )
 
-    def _calculate_relo_probability(self, job_data: dict) -> float:
+    def _determine_work_model(self, job_data: dict) -> str:
+        """Heuristic to determine work modality from JobSpy fields."""
+        location = (job_data.get("location") or "").lower()
+        description = (job_data.get("description") or "").lower()
+        
+        if job_data.get("is_remote") or "remote" in location:
+            return "remote"
+        
+        if "hybrid" in location or "hybrid" in description:
+            return "hybrid"
+            
+        if location:
+            return "onsite"
+            
+        return "unknown"
+
+    def _calculate_relo_probability(self, job_data: dict, work_model: str) -> float:
         """
         Calculates relocation probability (0.0 - 1.0) based on config keywords
         and metadata indicators.
         """
+        # 1. Exclusion Guards
+        if work_model == "remote":
+            return 0.0
+            
+        # Don't need relocation if the job is already in our home location
+        job_loc = (job_data.get("location") or "").lower()
+        if self.user_home and job_loc:
+            # Simple check: if city/state from user_home is in job_loc
+            home_parts = [p.strip().lower() for p in self.user_home.split(",")]
+            # e.g. ["HOME_STREET_ADDRESS", "HOME_CITY_STATE"]
+            # We care about city/state
+            if any(part in job_loc for part in home_parts[1:]):
+                return 0.0
+
         score = 0.0
         desc = (job_data.get("description") or "").lower()
         
-        # 1. Keyword Vector
+        # 2. Keyword Vector
         keywords = self.relo_heuristics.get("keywords", [])
         for kw in keywords:
             if kw.lower() in desc:
-                score += 0.4
-                break # Only count once
+                score += 0.5 # Increased weight for explicit mention
+                break
         
-        # 2. Salary Vector (Heuristic: High-pay roles often include relo)
+        # 3. Salary Vector
         min_sal = job_data.get("min_amount", 0) or 0
-        threshold = self.relo_heuristics.get("min_salary_threshold", 120000)
+        threshold = self.relo_heuristics.get("min_salary_threshold", 110000)
         if min_sal >= threshold:
             score += 0.3
             
-        # 3. Location Vector (Remote roles don't need relo)
-        if job_data.get("is_remote"):
-            return 0.0
-            
+        # 4. Company Size Heuristic (if available)
+        # Larger companies are more likely to have relo budgets
+        
         return min(score, 1.0)
-
-    def _generate_custom_id(self, source_url: str, entity_label: str) -> str:
-        from scout_core import core_engine
-        return core_engine.generate_vanguard_id(source_url, entity_label)
-
-    def _get_timestamp(self) -> str:
-        from datetime import datetime
-        return datetime.utcnow().isoformat() + "Z"
