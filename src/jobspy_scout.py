@@ -1,3 +1,5 @@
+import time
+import random
 from base_scout import BaseScout
 import logging
 import yaml
@@ -50,6 +52,9 @@ class JobSpyScout(BaseScout):
         if self.loc_logic.get("remote_allowed"):
             self._execute_search(is_remote=True, location=None)
 
+        # Randomized delay between passes
+        time.sleep(random.uniform(10, 20))
+
         # 2. Second Pass: Austin Metroplex (Hybrid/In-Office)
         target_metro = self.loc_logic.get("target_metro")
         if target_metro:
@@ -58,27 +63,40 @@ class JobSpyScout(BaseScout):
     def _execute_search(self, is_remote: bool, location: Optional[str]):
         """Internal search runner for specific location context."""
         context_str = "Remote" if is_remote else f"Local ({location})"
-        self.logger.info(f"Starting {context_str} search pass...")
+        sites = self.search_params.get("sites", ["linkedin"])
         
-        try:
-            jobs = scrape_jobs(
-                site_name=self.search_params.get("sites", ["linkedin"]),
-                search_term=self.search_params.get("term", "Software Engineer"),
-                location=location,
-                distance=self.loc_logic.get("metro_radius_miles", 35) if not is_remote else None,
-                is_remote=is_remote,
-                results_wanted=self.search_params.get("results_wanted", 20),
-                hours_old=self.search_params.get("hours_old", 72),
-                country_indeed='USA'
-            )
-            
-            if jobs is not None:
-                for _, row in jobs.iterrows():
-                    job_data = row.to_dict()
-                    self._process_and_report(job_data)
+        self.logger.info(f"Starting {context_str} search pass for {len(sites)} sites...")
+        
+        for site in sites:
+            try:
+                self.logger.info(f"Querying {site}...")
+                
+                # Jitter: Random sleep before each site request to avoid bulk detection
+                time.sleep(random.uniform(3, 8))
 
-        except Exception as e:
-            self.logger.error(f"Search pass failed: {str(e)}")
+                jobs = scrape_jobs(
+                    site_name=[site],
+                    search_term=self.search_params.get("term", "Software Engineer"),
+                    location=location,
+                    distance=self.loc_logic.get("metro_radius_miles", 35) if not is_remote else None,
+                    is_remote=is_remote,
+                    results_wanted=self.search_params.get("results_wanted", 20),
+                    hours_old=self.search_params.get("hours_old", 72),
+                    country_indeed='USA'
+                )
+                
+                if jobs is not None and not jobs.empty:
+                    count = len(jobs)
+                    self.logger.info(f"Found {count} jobs on {site}.")
+                    for _, row in jobs.iterrows():
+                        job_data = row.to_dict()
+                        self._process_and_report(job_data)
+                else:
+                    self.logger.warning(f"No jobs found on {site} for {context_str} context.")
+
+            except Exception as e:
+                # Catch specific 403s if possible, or log broadly
+                self.logger.error(f"Search failed for {site}: {str(e)}")
 
     def _process_and_report(self, job_data: dict):
         """Refines data and applies relocation heuristics before reporting."""
@@ -108,8 +126,8 @@ class JobSpyScout(BaseScout):
 
     def _determine_work_model(self, job_data: dict) -> str:
         """Heuristic to determine work modality from JobSpy fields."""
-        location = (job_data.get("location") or "").lower()
-        description = (job_data.get("description") or "").lower()
+        location = str(job_data.get("location") or "").lower()
+        description = str(job_data.get("description") or "").lower()
         
         if job_data.get("is_remote") or "remote" in location:
             return "remote"
@@ -132,7 +150,7 @@ class JobSpyScout(BaseScout):
             return 0.0
             
         # Don't need relocation if the job is already in our home location
-        job_loc = (job_data.get("location") or "").lower()
+        job_loc = str(job_data.get("location") or "").lower()
         if self.user_home and job_loc:
             # Simple check: if city/state from user_home is in job_loc
             home_parts = [p.strip().lower() for p in self.user_home.split(",")]
@@ -142,7 +160,7 @@ class JobSpyScout(BaseScout):
                 return 0.0
 
         score = 0.0
-        desc = (job_data.get("description") or "").lower()
+        desc = str(job_data.get("description") or "").lower()
         
         # 2. Keyword Vector
         keywords = self.relo_heuristics.get("keywords", [])

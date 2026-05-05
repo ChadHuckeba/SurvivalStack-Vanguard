@@ -1,6 +1,8 @@
-python-jobspy
-pandas
+PyYAML
+curl_cffi
 fastapi
-uvicorn
 jinja2
+pandas
 python-dotenv
+python-jobspy
+uvicorn
