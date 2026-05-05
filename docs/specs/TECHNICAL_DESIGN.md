@@ -20,6 +20,7 @@ graph TD
         Registry --> Scout1[JobSearchScout]
         Registry --> Scout2[Future_Scout_X]
         Scout1 --> Adapter[JobSpy Adapter]
+        Scout2 --> Crawler[CareerPageParser]
     end
 
     subgraph Persistence_Layer
@@ -73,6 +74,9 @@ graph TD
 
 ## 6.0 EXTERNAL INTEGRATIONS & SECURITY
 * **JobSpy**: Translates DataFrame output to the Vanguard JSON Contract.
+* **CareerPageParser**: Lightweight heuristic crawler for direct job URL extraction from company sites.
+    * **ATS Detection**: Uses regex signatures for Greenhouse, Lever, Workday, etc.
+    * **Heuristic Fallback**: Identifies job patterns in URLs for custom career pages.
 * **PII Encryption**: Local profiles must be encrypted at rest using Fernet; keys are isolated in `.env`.
 * **Jitter Protocol**: Randomized delays of 15–45 seconds between requests.
 * **Exponential Backoff**: Minimum 4-hour session termination upon 429 errors.

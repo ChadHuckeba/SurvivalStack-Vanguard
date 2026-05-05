@@ -1,4 +1,5 @@
 PyYAML
+beautifulsoup4
 curl_cffi
 fastapi
 jinja2
