@@ -1,12 +1,13 @@
-import os
-import json
 import hashlib
 import logging
-from datetime import datetime
 from pathlib import Path
+from typing import Any, Optional
 from urllib.parse import urlparse
 from vanguard.models.lead import Lead
-from persistence_interface import SQLitePersistence, JSONPersistence
+from vanguard.persistence.engine import SQLiteEngine
+from vanguard.persistence.leads_dao import LeadsDAO
+from vanguard.persistence.companies_dao import CompaniesDAO
+from vanguard.persistence.migration_manager import MigrationManager
 
 class ScoutCore:
     """
@@ -15,29 +16,29 @@ class ScoutCore:
     A domain-agnostic singleton that manages state persistence, 
     entity deduplication, and data integrity for all specialized scouts.
     """
-    _instance = None
-    _initialized = False
+    _instance: Optional["ScoutCore"] = None
+    _initialized: bool = False
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> "ScoutCore":
         if cls._instance is None:
             cls._instance = super(ScoutCore, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not self._initialized:
             self._initialize_core()
             self.__class__._initialized = True
 
-    def _initialize_core(self):
+    def _initialize_core(self) -> None:
         """
         Initialize the system environment and load the persistent state.
         Ensures the local infrastructure exists for agnostic data storage.
         """
         self.root_dir = Path(__file__).parent.parent
         self.data_dir = self.root_dir / "data"
-        self.state_path = self.data_dir / "state.json"
         self.db_path = self.data_dir / "vanguard.db"
         self.log_path = self.root_dir / "logs" / "system.log"
+        self.migrations_dir = self.root_dir / "src" / "vanguard" / "persistence" / "migrations"
         
         self.data_dir.mkdir(exist_ok=True)
         (self.root_dir / "logs").mkdir(exist_ok=True)
@@ -45,35 +46,19 @@ class ScoutCore:
         logging.basicConfig(
             filename=self.log_path, 
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s'
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
-        # Initialize persistence layer (Beta: SQLite)
-        self.persistence = SQLitePersistence(self.db_path)
+        # Initialize Persistence Engine
+        self.engine = SQLiteEngine(self.db_path)
         
-        # Check for legacy data and migrate if necessary
-        if self.state_path.exists():
-            self._migrate_from_json()
-
-    def _migrate_from_json(self):
-        """Migrates legacy JSON state to SQLite."""
-        logging.info("Legacy state.json found. Initiating migration to SQLite...")
-        json_prov = JSONPersistence(self.state_path)
-        legacy_state = json_prov.load_state()
+        # Apply Migrations
+        self.migration_manager = MigrationManager(self.engine, self.migrations_dir)
+        self.migration_manager.apply_all()
         
-        if legacy_state and "entities" in legacy_state:
-            for v_id, entry in legacy_state["entities"].items():
-                self.persistence.upsert_entry(entry)
-            
-            # Backup the legacy file after successful migration
-            bak_path = self.state_path.with_suffix(".json.migrated")
-            os.rename(self.state_path, bak_path)
-            logging.info(f"Migration complete. Legacy state moved to {bak_path}")
-
-    @property
-    def state(self):
-        """Legacy compatibility property for state access."""
-        return self.persistence.load_state()
+        # Initialize DAOs
+        self.leads = LeadsDAO(self.engine)
+        self.companies = CompaniesDAO(self.engine)
 
     def _sanitize_url(self, raw_url: str) -> str:
         """
@@ -92,17 +77,14 @@ class ScoutCore:
         input_string = f"{sanitized_url}{entity_label}".strip().lower()
         return hashlib.sha256(input_string.encode()).hexdigest()
 
-    def upsert_record(self, record_data: dict):
+    def upsert_record(self, lead: Lead) -> None:
         """
         Ingest an entity record or update an existing entry.
         Validated against the Pydantic Lead model at the boundary.
         """
         try:
-            # 1. Validation at the Edge
-            lead = Lead(**record_data)
-            
-            # 2. Handoff to persistence (using validated model)
-            self.persistence.upsert_entry(lead.model_dump())
+            # Handoff to persistence (using validated model)
+            self.leads.upsert_lead(lead)
             
         except Exception as e:
             logging.error(f"Ingestion failed for lead: {str(e)}")

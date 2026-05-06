@@ -1,5 +1,5 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel
 
 class DiscoveryResult(BaseModel):
     portal_url: Optional[str] = None
