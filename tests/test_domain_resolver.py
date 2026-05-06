@@ -8,9 +8,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 from utils.domain_resolver import DomainResolver
 from utils.career_page_parser import CareerPageParser
 
+import pytest
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
+@pytest.mark.parametrize("company_name", [
+    "OpenAI",
+    "Anthropic",
+    "Cloudflare",
+    "Visa",
+    "Apollo.io"
+])
 def test_resolution(company_name: str):
     print(f"\n--- Testing Resolution for: {company_name} ---")
     resolver = DomainResolver()

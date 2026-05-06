@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 import logging
-from datetime import datetime
+from typing import Any
 from scout_core import core_engine
+from vanguard.models.lead import Lead, SourceInfo, LeadContent
 
 class BaseScout(ABC):
     """
     Abstract Base Class for all Vanguard specialized agents (Spokes).
-    
+
     Provides the standardized interface for data ingestion and 
     communication with the ScoutCore (Hub).
     """
@@ -20,17 +21,17 @@ class BaseScout(ABC):
         self.logger = logging.getLogger(f"vanguard.{scout_name}")
 
     @abstractmethod
-    def run(self):
+    def run(self) -> None:
         """
         The primary execution loop for the scout.
         Must be implemented by all specialized subclasses.
         """
         pass
 
-    def report_entity(self, entity_label: str, raw_data: dict, work_model: str = "unknown"):
+    def report_entity(self, entity_label: str, raw_data: dict[str, Any], work_model: str = "unknown") -> None:
         """
         Standardized method to hand data back to the ScoutCore.
-        
+
         Args:
             entity_label (str): The primary name/title of the entity found.
             raw_data (dict): The full payload of data discovered.
@@ -41,24 +42,19 @@ class BaseScout(ABC):
             source_url=self.target_source, 
             entity_label=entity_label
         )
-        
-        # Prepare the standardized record packet
-        record_packet = {
-            "vanguard_id": vanguard_id,
-            "source_info": {
-                "scout": self.scout_name,
-                "source_url": self.target_source
-            },
-            "work_model": work_model,
-            "content": raw_data,
-            "metadata": {
-                "first_seen": datetime.utcnow().isoformat() + "Z",
-                "last_seen": datetime.utcnow().isoformat() + "Z",
-                "hit_count": 1
-            }
-        }
-        
+
+        # Prepare the standardized record using Pydantic models at the boundary
+        lead = Lead(
+            vanguard_id=vanguard_id,
+            source_info=SourceInfo(
+                scout=self.scout_name,
+                source_url=self.target_source
+            ),
+            work_model=work_model,
+            content=LeadContent(**raw_data)
+        )
+
         self.logger.info(f"Reporting entity: {entity_label} ({vanguard_id[:8]})")
-        
-        # Hand the packet to the Singleton Hub
-        core_engine.upsert_record(record_packet)
+
+        # Hand the validated model to the Singleton Hub
+        core_engine.upsert_record(lead)

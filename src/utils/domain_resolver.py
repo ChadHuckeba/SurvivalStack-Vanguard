@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 try:
     from ddgs import DDGS
 except ImportError:
-    from duckduckgo_search import DDGS
+    from duckduckgo_search import DDGS  # type: ignore
 
 logger = logging.getLogger("vanguard.domain_resolver")
 
@@ -43,7 +43,7 @@ class DomainResolver:
         r"quora\.com"
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ddgs = DDGS()
 
     def resolve_company_domain(self, company_name: str) -> Optional[str]:
@@ -56,7 +56,8 @@ class DomainResolver:
         # 0. Pre-check: If it looks like a domain already
         if "." in company_name and " " not in company_name:
             candidate = company_name.lower()
-            if candidate.startswith("www."): candidate = candidate[4:]
+            if candidate.startswith("www."):
+                candidate = candidate[4:]
             is_blocked = False
             for pattern in self.BLOCKLIST:
                 if re.search(pattern, candidate):
@@ -79,8 +80,8 @@ class DomainResolver:
                 results = list(self.ddgs.text(company_name, max_results=10))
 
             for res in results:
-                url = res.get("href")
-                title = res.get("title", "").lower()
+                url = str(res.get("href", ""))
+                title = str(res.get("title", "")).lower()
                 if not url:
                     continue
                 
@@ -115,10 +116,12 @@ class DomainResolver:
             
             # Final fallback: first non-blocked link
             for res in results:
-                url = res.get("href")
-                if not url: continue
+                url = str(res.get("href", ""))
+                if not url:
+                    continue
                 domain = urlparse(url).netloc.lower()
-                if domain.startswith("www."): domain = domain[4:]
+                if domain.startswith("www."):
+                    domain = domain[4:]
                 is_blocked = False
                 for pattern in self.BLOCKLIST:
                     if re.search(pattern, domain):

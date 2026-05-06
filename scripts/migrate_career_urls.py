@@ -1,15 +1,12 @@
 import logging
 import sys
 import os
-import sqlite3
-import json
 import re
-from pathlib import Path
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from persistence_interface import SQLitePersistence
+from scout_core import core_engine
 from utils.career_page_parser import CareerPageParser
 from utils.company_registry import CompanyRegistry
 
@@ -25,38 +22,27 @@ AGGREGATORS = [
     r"ziprecruiter\.com"
 ]
 
-def backfill_career_urls():
+def backfill_career_urls() -> None:
     """
     Iterates through entries and attempts to extract career URLs using a Company-First approach.
     """
-    db_path = Path("/home/chadh/survivalstack/Vanguard/data/vanguard.db")
-    if not db_path.exists():
-        logger.error(f"Database not found at {db_path}")
-        return
-
-    persistence = SQLitePersistence(db_path)
-    registry = CompanyRegistry(persistence)
+    registry = CompanyRegistry(persistence_leads=core_engine.leads, persistence_companies=core_engine.companies)
     
-    # Query entries that need extraction or might have stale URLs
-    with persistence._get_connection() as conn:
-        rows = conn.execute("""
-            SELECT vanguard_id, entry_data, provider_id, career_extraction_status
-            FROM entries 
-        """).fetchall()
+    # Query all entries using the new modular engine
+    leads_list = core_engine.leads.list_leads()
 
-    if not rows:
+    if not leads_list:
         logger.info("No entries require career URL backfill.")
         return
 
-    logger.info(f"Starting Company-First backfill for {len(rows)} entries...")
+    logger.info(f"Starting Company-First backfill for {len(leads_list)} entries...")
 
-    for row in rows:
-        v_id = row["vanguard_id"]
-        data = json.loads(row["entry_data"])
-        company_name = data.get("company")
+    for lead in leads_list:
+        v_id = lead.vanguard_id
+        company_name = lead.content.company
         
         # Determine if we should attempt domain resolution
-        target_site = data.get("company_url") or data.get("source_url")
+        target_site = lead.content.company_url or lead.source_info.source_url
         is_aggregator = False
         if target_site:
             for pattern in AGGREGATORS:
@@ -81,7 +67,7 @@ def backfill_career_urls():
                 career_page = CareerPageParser.discover_career_page(target_site)
 
         # 2. Deep Link Discovery (Job Specific)
-        job_title = data.get("title") or data.get("label")
+        job_title = lead.content.title
         final_url = career_page
         
         if career_page and job_title:
@@ -97,27 +83,21 @@ def backfill_career_urls():
             temp_parser = CareerPageParser(career_page)
             result = temp_parser.extract_job_urls()
             
-            persistence.upsert_entry({
-                "vanguard_id": v_id,
-                "career_info": {
-                    "url": final_url,
-                    "method": "weighted_discovery" if final_url != career_page else result["method"],
-                    "status": "verified" if final_url != career_page else result["status"],
-                    "error": result["error"]
-                }
-            })
+            lead.career_info.url = final_url
+            lead.career_info.method = "weighted_discovery" if final_url != career_page else result["method"]
+            lead.career_info.status = "verified" if final_url != career_page else result["status"]
+            lead.career_info.error = result["error"]
+            
+            core_engine.leads.upsert_lead(lead)
             logger.info(f"Processed {v_id[:8]} ({company_name}): -> {final_url}")
         else:
             # Mark as failed if no career page could be found
-            persistence.upsert_entry({
-                "vanguard_id": v_id,
-                "career_info": {
-                    "url": None,
-                    "method": "heuristic",
-                    "status": "failed",
-                    "error": f"Could not locate official career page for {company_name or 'Unknown Company'}"
-                }
-            })
+            lead.career_info.url = None
+            lead.career_info.method = "heuristic"
+            lead.career_info.status = "failed"
+            lead.career_info.error = f"Could not locate official career page for {company_name or 'Unknown Company'}"
+            
+            core_engine.leads.upsert_lead(lead)
             logger.warning(f"Failed to locate career page for {v_id[:8]} ({company_name})")
 
 if __name__ == "__main__":

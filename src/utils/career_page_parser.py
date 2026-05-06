@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Dict, Optional
+from typing import Dict, Optional, Any
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from curl_cffi import requests
@@ -91,9 +91,9 @@ class CareerPageParser:
                 if response.status_code == 200:
                     final_url = response.url
                     soup = BeautifulSoup(response.text, "html.parser")
-                    title = soup.title.string.lower() if soup.title else ""
+                    title = str(soup.title.string).lower() if soup.title and soup.title.string else ""
                     
-                    score = path_weight
+                    score = float(path_weight)
                     
                     # Title-based scoring adjustments
                     if any(kw in title for kw in cls.PORTAL_KEYWORDS):
@@ -125,7 +125,7 @@ class CareerPageParser:
             
             if best_score >= 0.5:
                 logger.info(f"Discovered best career page: {best_url} (Score: {best_score:.2f})")
-                return best_url
+                return str(best_url)
         
         return None
 
@@ -141,7 +141,7 @@ class CareerPageParser:
                 impersonate="chrome", 
                 timeout=15
             )
-            response.raise_for_status()
+            response.raise_for_status()  # type: ignore
             return response.text
         except Exception as e:
             logger.error(f"Failed to fetch {self.target_url}: {str(e)}")
@@ -162,7 +162,7 @@ class CareerPageParser:
         clean_title = re.sub(r"[^a-z0-9]", "", job_title.lower())
 
         for link in links:
-            href = link["href"]
+            href = str(link["href"])
             link_text = link.get_text(strip=True).lower()
             clean_link_text = re.sub(r"[^a-z0-9]", "", link_text)
             
@@ -186,7 +186,7 @@ class CareerPageParser:
                 continue
 
             # Calculate match score
-            score = 0
+            score = 0.0
             if clean_link_text and (clean_title in clean_link_text or clean_link_text in clean_title):
                 score += 0.8
                 logger.debug(f"Title match found: '{link_text}' score: {score}")
@@ -202,11 +202,11 @@ class CareerPageParser:
             candidates.sort(key=lambda x: x[0], reverse=True)
             best_score, best_url = candidates[0]
             logger.info(f"Discovered deep link: {best_url} (Score: {best_score:.2f})")
-            return best_url
+            return str(best_url)
 
         return None
 
-    def extract_job_urls(self) -> Dict:
+    def extract_job_urls(self) -> Dict[str, Any]:
         """
         Orchestrates the extraction process: ATS detection followed by heuristic fallback.
         Returns a dictionary with status and metadata.
@@ -228,7 +228,7 @@ class CareerPageParser:
 
         # Phase A: ATS Signature Detection
         for link in links:
-            href = link["href"]
+            href = str(link["href"])
             for ats, signature in self.ATS_SIGNATURES.items():
                 if re.search(signature, href):
                     abs_url = self._sanitize_url(href)
@@ -240,7 +240,7 @@ class CareerPageParser:
         # Phase B: Heuristic Fallback (if few ATS links found or for mixed sites)
         if len(discovered_urls) < 5:
             for link in links:
-                href = link["href"]
+                href = str(link["href"])
                 for pattern in self.HEURISTIC_PATTERNS:
                     if re.search(pattern, href, re.IGNORECASE):
                         abs_url = self._sanitize_url(href)

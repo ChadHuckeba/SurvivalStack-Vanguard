@@ -7,9 +7,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from utils.career_page_parser import CareerPageParser
 
+import pytest
+
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+@pytest.mark.parametrize("url", [
+    "https://openai.com/careers",           # Landing page
+    "https://jobs.lever.co/openai",         # Direct Lever Board
+    "https://www.anthropic.com/careers",    # Landing page
+    "https://boards.greenhouse.io/anthropic", # Direct Greenhouse Board
+    "https://www.cloudflare.com/careers/jobs/" # Hybrid page
+])
 def test_parser(url: str):
     print(f"\n--- Testing: {url} ---")
     parser = CareerPageParser(url)
