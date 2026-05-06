@@ -173,12 +173,20 @@
                 const careerStatus = career.status || 'pending';
                 const careerError = career.error || '';
 
+                // Company Portal Logic
+                const company = lead.content?.company || 'N/A';
+                const portalUrl = lead.company_info?.portal_url;
+                let companyHtml = company;
+                if (portalUrl) {
+                    companyHtml = `<a href="${portalUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline decoration-1 underline-offset-4 transition-all" onclick="event.stopPropagation()">${company}</a>`;
+                }
+
                 let titleHtml = '';
                 let statusIcon = '';
 
                 if (careerStatus === 'verified' && careerUrl) {
                     titleHtml = `<a href="${careerUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline decoration-1 underline-offset-4 transition-all" onclick="event.stopPropagation()">${lead.content?.title || 'Unknown'}</a>`;
-                    statusIcon = `<i class="fas fa-check-circle text-[10px] text-green-500 ml-1.5" title="Verified Career URL"></i>`;
+                    statusIcon = `<i class="fas fa-check-circle text-[10px] text-green-500 ml-1.5" title="Verified Job Link"></i>`;
                 } else if (careerStatus === 'ambiguous' && careerUrl) {
                     titleHtml = `<a href="${careerUrl}" target="_blank" class="text-amber-400 hover:text-amber-300 hover:underline decoration-1 underline-offset-4 transition-all" onclick="event.stopPropagation()">${lead.content?.title || 'Unknown'}</a>`;
                     statusIcon = `<i class="fas fa-question-circle text-[10px] text-amber-500 ml-1.5" title="${careerError}"></i>`;
@@ -200,7 +208,7 @@
                         ${titleHtml}
                         ${statusIcon}
                     </td>
-                    <td class="px-6 py-4 text-slate-400 text-sm">${lead.content?.company || 'N/A'}</td>
+                    <td class="px-6 py-4 text-slate-400 text-sm">${companyHtml}</td>
                     <td class="px-6 py-4 text-slate-500 text-sm">${lead.content?.location || 'Remote'}</td>
                     <td class="px-6 py-4 text-xs uppercase tracking-tighter ${modelColor}">${model}</td>
                     <td class="px-6 py-4 text-center">

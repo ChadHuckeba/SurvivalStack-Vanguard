@@ -233,6 +233,9 @@ class SQLitePersistence(PersistenceInterface):
                 "scout": scout_name,
                 "source_url": source_url
             },
+            "company_info": {
+                "portal_url": res.get("company_portal_url")
+            },
             "content": entry_data,
             "work_model": res.get("work_model", "unknown"),
             "career_info": {
@@ -267,8 +270,14 @@ class SQLitePersistence(PersistenceInterface):
             self.upsert_entry(entry)
 
     def get_entry(self, vanguard_id: str) -> dict:
+        query = """
+            SELECT e.*, c.career_url as company_portal_url 
+            FROM entries e 
+            LEFT JOIN companies c ON json_extract(e.entry_data, '$.company') = c.company_name
+            WHERE e.vanguard_id = ?
+        """
         with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM entries WHERE vanguard_id = ?", (vanguard_id,)).fetchone()
+            row = conn.execute(query, (vanguard_id,)).fetchone()
             return self._map_row_to_discovery(row)
 
     def upsert_entry(self, entry_object: dict) -> bool:
@@ -334,10 +343,14 @@ class SQLitePersistence(PersistenceInterface):
             return True
 
     def query_entries(self, filter_criteria: dict = None) -> list:
-        query = "SELECT * FROM entries"
+        query = """
+            SELECT e.*, c.career_url as company_portal_url 
+            FROM entries e 
+            LEFT JOIN companies c ON json_extract(e.entry_data, '$.company') = c.company_name
+        """
         params = []
         if filter_criteria:
-            clauses = [f"{k} = ?" for k in filter_criteria.keys()]
+            clauses = [f"e.{k} = ?" for k in filter_criteria.keys()]
             query += " WHERE " + " AND ".join(clauses)
             params = list(filter_criteria.values())
         
