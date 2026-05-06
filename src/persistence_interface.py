@@ -192,10 +192,23 @@ class SQLitePersistence(PersistenceInterface):
                     FOREIGN KEY (vanguard_id) REFERENCES entries (vanguard_id) ON DELETE CASCADE
                 );
             """)
+
+            # Company Registry Table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS companies (
+                    company_name TEXT PRIMARY KEY,
+                    root_domain TEXT,
+                    career_url TEXT,
+                    ats_provider TEXT,
+                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
             # Indexes
             conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_provider ON entries(provider_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_last_seen ON entries(last_seen);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_status ON entries(status);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_companies_domain ON companies(root_domain);")
 
     def _map_row_to_discovery(self, row) -> dict:
         """Maps a DB row back to the Vanguard Discovery Contract structure."""
@@ -270,24 +283,11 @@ class SQLitePersistence(PersistenceInterface):
                       "unknown"
         
         # Entry Data normalization
-        # If it has 'content', that's our data. If not, maybe it's legacy 'data' or the object itself.
-        entry_data_dict = entry_object.get("content") or \
-                          entry_object.get("data") or \
-                          entry_object
+        # We only want to update entry_data if full content is provided.
+        # Otherwise, we keep the existing entry_data in the DB.
+        incoming_content = entry_object.get("content") or entry_object.get("data")
+        entry_data = json.dumps(incoming_content) if incoming_content else None
         
-        # Preserve source/label/title in the data blob if they were at the top level
-        if "source_url" not in entry_data_dict:
-            source = entry_object.get("source_info", {}).get("source_url") or \
-                     entry_object.get("source")
-            if source:
-                entry_data_dict["source_url"] = source
-        
-        if "title" not in entry_data_dict:
-            title = entry_object.get("label") or entry_object.get("title")
-            if title:
-                entry_data_dict["title"] = title
-
-        entry_data = json.dumps(entry_data_dict)
         identity_manifest = json.dumps(["source_url", "entity_label"])
         
         incoming_hit_count = entry_object.get("metadata", {}).get("hit_count", 1)
@@ -308,7 +308,7 @@ class SQLitePersistence(PersistenceInterface):
                         last_seen = CURRENT_TIMESTAMP,
                         hit_count = hit_count + 1,
                         status = 'active',
-                        entry_data = ?,
+                        entry_data = COALESCE(?, entry_data),
                         work_model = ?,
                         career_url = COALESCE(?, career_url),
                         career_discovery_method = COALESCE(?, career_discovery_method),
@@ -317,6 +317,8 @@ class SQLitePersistence(PersistenceInterface):
                     WHERE vanguard_id = ?
                 """, (entry_data, work_model, career_url, career_method, career_status, career_status, career_error, v_id))
             else:
+                # If it's a new entry, we must have entry_data
+                final_entry_data = entry_data if entry_data else json.dumps(entry_object)
                 first_seen = incoming_first_seen if incoming_first_seen else datetime.utcnow().isoformat() + "Z"
                 last_seen = incoming_last_seen if incoming_last_seen else datetime.utcnow().isoformat() + "Z"
                 
@@ -328,7 +330,7 @@ class SQLitePersistence(PersistenceInterface):
                         status
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-                """, (v_id, provider_id, identity_manifest, entry_data, work_model, first_seen, last_seen, incoming_hit_count, career_url, career_method, career_status, career_error))
+                """, (v_id, provider_id, identity_manifest, final_entry_data, work_model, first_seen, last_seen, incoming_hit_count, career_url, career_method, career_status, career_error))
             return True
 
     def query_entries(self, filter_criteria: dict = None) -> list:
@@ -351,3 +353,32 @@ class SQLitePersistence(PersistenceInterface):
                 WHERE last_seen < datetime('now', ?) AND status = 'active'
             """, (f'-{ttl_days} days',))
             return cursor.rowcount
+
+    # --- Company Registry Methods ---
+
+    def get_company(self, company_name: str) -> dict:
+        """Retrieves company metadata from the registry."""
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT * FROM companies WHERE company_name = ?", (company_name,)).fetchone()
+            if row:
+                return dict(row)
+        return None
+
+    def upsert_company(self, company_data: dict) -> bool:
+        """Adds or updates a company in the registry."""
+        name = company_data.get("company_name")
+        domain = company_data.get("root_domain")
+        career = company_data.get("career_url")
+        ats = company_data.get("ats_provider")
+        
+        with self._get_connection() as conn:
+            conn.execute("""
+                INSERT INTO companies (company_name, root_domain, career_url, ats_provider, last_updated)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(company_name) DO UPDATE SET
+                    root_domain = COALESCE(?, root_domain),
+                    career_url = COALESCE(?, career_url),
+                    ats_provider = COALESCE(?, ats_provider),
+                    last_updated = CURRENT_TIMESTAMP
+            """, (name, domain, career, ats, domain, career, ats))
+            return True

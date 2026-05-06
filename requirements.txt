@@ -1,6 +1,7 @@
 PyYAML
 beautifulsoup4
 curl_cffi
+ddgs
 fastapi
 jinja2
 pandas

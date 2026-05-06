@@ -94,7 +94,32 @@ DATETIME
 DEFAULT CURRENT_TIMESTAMP
 Timestamp of last analysis.
 
-
+2.3 Table: companies
+The system of record for verified company metadata (Company Registry).
+Column
+Data Type
+Constraints
+Definition
+company_name
+TEXT
+PRIMARY KEY
+Official name of the company.
+root_domain
+TEXT
+NULL
+Resolved official root domain.
+career_url
+TEXT
+NULL
+Verified career landing page URL.
+ats_provider
+TEXT
+NULL
+Identified ATS provider (e.g., greenhouse, lever).
+last_updated
+DATETIME
+DEFAULT CURRENT_TIMESTAMP
+Timestamp of most recent discovery or update.
 
 3.0 Initial Database Schema (DDL)
 -- Enable WAL mode for concurrency
@@ -126,10 +151,20 @@ CREATE TABLE IF NOT EXISTS enrichment (
     FOREIGN KEY (vanguard_id) REFERENCES entries (vanguard_id) ON DELETE CASCADE
 );
 
+-- Create companies table
+CREATE TABLE IF NOT EXISTS companies (
+    company_name TEXT PRIMARY KEY,
+    root_domain TEXT,
+    career_url TEXT,
+    ats_provider TEXT,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_entries_provider ON entries(provider_id);
 CREATE INDEX IF NOT EXISTS idx_entries_last_seen ON entries(last_seen);
 CREATE INDEX IF NOT EXISTS idx_entries_status ON entries(status);
+CREATE INDEX IF NOT EXISTS idx_companies_domain ON companies(root_domain);
 
 
 
