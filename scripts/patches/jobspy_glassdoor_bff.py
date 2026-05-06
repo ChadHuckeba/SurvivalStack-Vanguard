@@ -1,7 +1,6 @@
 import sys
 import os
 import re
-import json
 
 # This script patches the python-jobspy library to restore Glassdoor functionality
 # by using the modern BFF endpoint and curl_cffi for Cloudflare bypass.

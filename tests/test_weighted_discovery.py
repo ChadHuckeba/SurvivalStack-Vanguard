@@ -7,10 +7,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from utils.career_page_parser import CareerPageParser
 
+import pytest
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
-def test_discovery(base_url: str, job_title: str = None):
+@pytest.mark.parametrize("base_url, job_title", [
+    ("https://veeva.com", "Operations Manager"),
+    ("https://openai.com", "Software Engineer"),
+    ("https://anthropic.com", "Product Manager"),
+    ("https://cloudflare.com", "Systems Engineer")
+])
+def test_discovery(base_url: str, job_title: str):
     print(f"\n--- Testing Discovery for: {base_url} ---")
     discovered = CareerPageParser.discover_career_page(base_url)
     if discovered:

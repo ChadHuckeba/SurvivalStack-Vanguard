@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 # Add src to python path if needed
@@ -7,8 +6,8 @@ src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.append(str(src_path))
 
-from scout_core import core_engine
-from job_search_scout import JobSearchScout
+from scout_core import core_engine  # noqa: E402
+from job_search_scout import JobSearchScout  # noqa: E402
 
 def main():
     print("Testing Vanguard Core and JobSearchScout...")
