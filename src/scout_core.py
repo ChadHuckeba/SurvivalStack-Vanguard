@@ -1,7 +1,10 @@
+import os
+import json
 import hashlib
 import logging
+import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 from urllib.parse import urlparse
 from vanguard.models.lead import Lead
 from vanguard.persistence.engine import SQLiteEngine
@@ -16,20 +19,20 @@ class ScoutCore:
     A domain-agnostic singleton that manages state persistence, 
     entity deduplication, and data integrity for all specialized scouts.
     """
-    _instance: Optional["ScoutCore"] = None
-    _initialized: bool = False
+    _instance = None
+    _initialized = False
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> "ScoutCore":
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(ScoutCore, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self) -> None:
+    def __init__(self):
         if not self._initialized:
             self._initialize_core()
             self.__class__._initialized = True
 
-    def _initialize_core(self) -> None:
+    def _initialize_core(self):
         """
         Initialize the system environment and load the persistent state.
         Ensures the local infrastructure exists for agnostic data storage.
@@ -40,13 +43,18 @@ class ScoutCore:
         self.log_path = self.root_dir / "logs" / "system.log"
         self.migrations_dir = self.root_dir / "src" / "vanguard" / "persistence" / "migrations"
         
+        # Add src to path for relative imports
+        src_path = str(self.root_dir / "src")
+        if src_path not in sys.path:
+            sys.path.append(src_path)
+        
         self.data_dir.mkdir(exist_ok=True)
         (self.root_dir / "logs").mkdir(exist_ok=True)
         
         logging.basicConfig(
             filename=self.log_path, 
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format='%(asctime)s - %(levelname)s - %(message)s'
         )
         
         # Initialize Persistence Engine
@@ -77,13 +85,19 @@ class ScoutCore:
         input_string = f"{sanitized_url}{entity_label}".strip().lower()
         return hashlib.sha256(input_string.encode()).hexdigest()
 
-    def upsert_record(self, lead: Lead) -> None:
+    def upsert_record(self, record_data: dict):
         """
         Ingest an entity record or update an existing entry.
         Validated against the Pydantic Lead model at the boundary.
         """
         try:
-            # Handoff to persistence (using validated model)
+            # 1. Validation at the Boundary
+            if isinstance(record_data, Lead):
+                lead = record_data
+            else:
+                lead = Lead(**record_data)
+            
+            # 2. Handoff to persistence (using validated model)
             self.leads.upsert_lead(lead)
             
         except Exception as e:

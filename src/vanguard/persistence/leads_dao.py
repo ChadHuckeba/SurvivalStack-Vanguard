@@ -12,11 +12,20 @@ class LeadsDAO(BaseDAO):
     Data Access Object for managing job leads (entries).
     """
 
-    def _map_row_to_lead(self, row: sqlite3.Row) -> Lead:
+    def _map_row_to_lead(self, row) -> Lead:
         """Translates a database row into a Pydantic Lead model."""
         res = dict(row)
-        content_data = json.loads(res["entry_data"])
-        
+        raw_data = json.loads(res["entry_data"])
+
+        # Handle legacy structure where full lead was saved into entry_data
+        content_data = raw_data.get("content") or raw_data
+
+        # Ensure required fields exist for Pydantic (Alpha fallback)
+        if "title" not in content_data:
+            content_data["title"] = content_data.get("label") or "Unknown Position"
+        if "company" not in content_data:
+            content_data["company"] = "Unknown Company"
+
         return Lead(
             vanguard_id=res["vanguard_id"],
             source_info=SourceInfo(
@@ -38,6 +47,7 @@ class LeadsDAO(BaseDAO):
             ),
             status=res["status"]
         )
+
 
     def get_lead(self, vanguard_id: str) -> Optional[Lead]:
         """Retrieves a single lead by its unique fingerprint."""
