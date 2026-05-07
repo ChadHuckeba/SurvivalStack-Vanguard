@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 class SourceInfo(BaseModel):
@@ -30,6 +30,20 @@ class LeadContent(BaseModel):
     description: Optional[str] = None
     company_url: Optional[str] = None
     vanguard_relo_probability: float = 0.0
+
+    @field_validator("title")
+    @classmethod
+    def title_not_unknown(cls, v: str) -> str:
+        if "unknown position" in v.lower():
+            raise ValueError("Title cannot be 'Unknown Position'")
+        return v
+
+    @field_validator("company")
+    @classmethod
+    def company_not_unknown(cls, v: str) -> str:
+        if "unknown company" in v.lower():
+            raise ValueError("Company cannot be 'Unknown Company'")
+        return v
 
 class Lead(BaseModel):
     vanguard_id: str
