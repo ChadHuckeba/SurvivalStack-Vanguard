@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import logging
 import time
@@ -20,9 +21,12 @@ from scout_core import core_engine  # noqa: E402
 
 app = FastAPI(title="Vanguard Lens Dashboard")
 
-# Setup templates
+# Setup templates and static files
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+STATIC_DIR = Path(__file__).parent / "static"
+
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/health")
