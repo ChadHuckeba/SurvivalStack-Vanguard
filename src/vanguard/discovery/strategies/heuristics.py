@@ -49,12 +49,6 @@ class HeuristicStrategy(BaseDiscoveryStrategy):
 
     # Blocklist to prevent resolving company names to job aggregators/boards
     GLOBAL_AGGREGATOR_BLOCKLIST = [
-        "indeed.com",
-        "linkedin.com",
-        "glassdoor.com",
-        "ziprecruiter.com",
-        "simplyhired.com",
-        "careerbuilder.com",
         "jooble.org",
         "lensa.com",
         "swooped.co",
