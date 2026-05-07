@@ -2,10 +2,10 @@ import time
 import random
 from base_scout import BaseScout
 import logging
-import yaml
+import yaml  # type: ignore
 import os
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Optional, Any
 from dotenv import load_dotenv
 
 # Load environment variables (USER_HOME_LOCATION)
@@ -17,13 +17,13 @@ except ImportError:
     logging.warning("jobspy not found. JobSpyScout will run in mock mode.")
     scrape_jobs = None
 
-class JobSpyScout(BaseScout):
+class JobSpyScout(BaseScout):  # type: ignore[misc]
     """
     JobSpyScout wraps the JobSpy library to act as a Vanguard Research Bridge.
     It implements prioritized location logic and relocation heuristics based on YAML config.
     """
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str | Path] = None) -> None:
         """
         Initialize with config file path. Defaults to config/scouts/jobspy.yaml.
         """
@@ -31,8 +31,8 @@ class JobSpyScout(BaseScout):
         
         # Load Configuration
         self.root_dir = Path(__file__).parent.parent
-        config_path = config_path or self.root_dir / "config" / "scouts" / "jobspy.yaml"
-        with open(config_path, 'r') as f:
+        resolved_config_path = config_path or self.root_dir / "config" / "scouts" / "jobspy.yaml"
+        with open(resolved_config_path, 'r') as f:
             self.settings = yaml.safe_load(f)
             
         self.search_params = self.settings.get("search_parameters", {})
@@ -40,7 +40,7 @@ class JobSpyScout(BaseScout):
         self.relo_heuristics = self.settings.get("relocation_heuristics", {})
         self.user_home = os.getenv("USER_HOME_LOCATION", "")
 
-    def run(self):
+    def run(self) -> None:
         """
         Executes the JobSpy scrape with prioritized location logic.
         """
@@ -60,7 +60,7 @@ class JobSpyScout(BaseScout):
         if target_metro:
             self._execute_search(is_remote=False, location=target_metro)
 
-    def _execute_search(self, is_remote: bool, location: Optional[str]):
+    def _execute_search(self, is_remote: bool, location: Optional[str]) -> None:
         """Internal search runner for specific location context."""
         context_str = "Remote" if is_remote else f"Local ({location})"
         sites = self.search_params.get("sites", ["linkedin"])
@@ -98,10 +98,9 @@ class JobSpyScout(BaseScout):
                 # Catch specific 403s if possible, or log broadly
                 self.logger.error(f"Search failed for {site}: {str(e)}")
 
-    def _process_and_report(self, job_data: dict):
+    def _process_and_report(self, job_data: dict[str, Any]) -> None:
         """Refines data and applies relocation heuristics before reporting."""
         entity_label = job_data.get("title", "Unknown Title")
-        source_url = job_data.get("job_url", "unknown")
         
         # 1. Determine Work Model
         work_model = self._determine_work_model(job_data)
@@ -124,7 +123,7 @@ class JobSpyScout(BaseScout):
             work_model=work_model
         )
 
-    def _determine_work_model(self, job_data: dict) -> str:
+    def _determine_work_model(self, job_data: dict[str, Any]) -> str:
         """Heuristic to determine work modality from JobSpy fields."""
         location = str(job_data.get("location") or "").lower()
         description = str(job_data.get("description") or "").lower()
@@ -140,7 +139,7 @@ class JobSpyScout(BaseScout):
             
         return "unknown"
 
-    def _calculate_relo_probability(self, job_data: dict, work_model: str) -> float:
+    def _calculate_relo_probability(self, job_data: dict[str, Any], work_model: str) -> float:
         """
         Calculates relocation probability (0.0 - 1.0) based on config keywords
         and metadata indicators.

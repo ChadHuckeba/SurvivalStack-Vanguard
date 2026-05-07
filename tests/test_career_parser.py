@@ -1,49 +1,42 @@
 import logging
 import sys
-import os
+from pathlib import Path
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+src_path = Path(__file__).parent.parent / "src"
+if str(src_path) not in sys.path:
+    sys.path.append(str(src_path))
 
-from utils.career_page_parser import CareerPageParser
+from vanguard.discovery.strategies.heuristics import HeuristicStrategy
+import pytest
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-def test_parser(url: str):
+@pytest.mark.parametrize("url, job_title", [
+    ("https://openai.com/careers", "Software Engineer"),
+    ("https://jobs.lever.co/openai", "Engineer"),
+    ("https://www.anthropic.com/careers", "Product"),
+    ("https://boards.greenhouse.io/anthropic", "Researcher"),
+    ("https://www.cloudflare.com/careers/jobs/", "Manager")
+])
+def test_parser(url: str, job_title: str) -> None:
     print(f"\n--- Testing: {url} ---")
-    parser = CareerPageParser(url)
-    result = parser.extract_job_urls()
+    strategy = HeuristicStrategy()
+    link = strategy.find_job_link(url, job_title)
     
-    status = result["status"]
-    urls = result["urls"]
-    method = result["method"]
-    error = result["error"]
-    
-    print(f"Status: {status.upper()}")
-    if method:
-        print(f"Method: {method}")
-    if error:
-        print(f"Error/Info: {error}")
-        
-    if urls:
-        print(f"Found {len(urls)} job URLs:")
-        for u in urls[:10]:  # Show first 10
-            print(f"  - {u}")
-        if len(urls) > 10:
-            print(f"  ... and {len(urls) - 10} more.")
+    if link:
+        print(f"Found deep link for {job_title}: {link}")
     else:
-        print("No job URLs found.")
+        print(f"No deep link found for {job_title}.")
 
 if __name__ == "__main__":
-    # Test cases representing different ATS and page structures
-    test_urls = [
-        "https://openai.com/careers",           # Landing page
-        "https://jobs.lever.co/openai",         # Direct Lever Board
-        "https://www.anthropic.com/careers",    # Landing page
-        "https://boards.greenhouse.io/anthropic", # Direct Greenhouse Board
-        "https://www.cloudflare.com/careers/jobs/" # Hybrid page
+    test_cases = [
+        ("https://openai.com/careers", "Software Engineer"),
+        ("https://jobs.lever.co/openai", "Engineer"),
+        ("https://www.anthropic.com/careers", "Product"),
+        ("https://boards.greenhouse.io/anthropic", "Researcher"),
+        ("https://www.cloudflare.com/careers/jobs/", "Manager")
     ]
-    
-    for url in test_urls:
-        test_parser(url)
+    for url, title in test_cases:
+        test_parser(url, title)

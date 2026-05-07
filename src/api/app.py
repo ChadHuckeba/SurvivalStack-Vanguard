@@ -1,11 +1,9 @@
 import sys
-import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import logging
 import time
@@ -18,7 +16,7 @@ logger = logging.getLogger("vanguard.api")
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(ROOT_DIR / "src"))
 
-from scout_core import core_engine
+from scout_core import core_engine  # noqa: E402
 
 app = FastAPI(title="Vanguard Lens Dashboard")
 
@@ -27,7 +25,7 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> JSONResponse:
     """Service health check endpoint."""
     return JSONResponse(
         content={
@@ -39,30 +37,30 @@ async def health_check():
     )
 
 @app.get("/", response_class=HTMLResponse)
-async def get_dashboard(request: Request):
+async def get_dashboard(request: Request) -> Any:
     """Serves the main dashboard UI."""
     return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/api/leads")
-async def get_leads():
+async def get_leads() -> Any:
     """Returns all leads from the persistence layer."""
     try:
-        leads = core_engine.persistence.query_entries()
+        leads = core_engine.leads.list_leads()
         return leads
     except Exception as e:
         return {"error": str(e)}
 
 @app.get("/api/stats")
-async def get_stats():
+async def get_stats() -> Any:
     """Returns basic stats about the ingested leads."""
     try:
-        leads = core_engine.persistence.query_entries()
-        stats = {
+        leads = core_engine.leads.list_leads()
+        stats: Dict[str, Any] = {
             "total_leads": len(leads),
             "providers": {}
         }
         for lead in leads:
-            provider = lead.get("source_info", {}).get("scout", "unknown")
+            provider = lead.source_info.scout
             stats["providers"][provider] = stats["providers"].get(provider, 0) + 1
         return stats
     except Exception as e:

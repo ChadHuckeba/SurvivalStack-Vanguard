@@ -1,27 +1,35 @@
 import logging
 import sys
-import os
+from pathlib import Path
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+src_path = Path(__file__).parent.parent / "src"
+if str(src_path) not in sys.path:
+    sys.path.append(str(src_path))
 
-from utils.domain_resolver import DomainResolver
-from utils.career_page_parser import CareerPageParser
+from vanguard.discovery.strategies.heuristics import HeuristicStrategy
+import pytest
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
-def test_resolution(company_name: str):
+@pytest.mark.parametrize("company_name", [
+    "OpenAI",
+    "Anthropic",
+    "Cloudflare",
+    "Visa",
+    "Apollo.io"
+])
+def test_resolution(company_name: str) -> None:
     print(f"\n--- Testing Resolution for: {company_name} ---")
-    resolver = DomainResolver()
-    domain = resolver.resolve_company_domain(company_name)
+    strategy = HeuristicStrategy()
+    domain = strategy.resolve_domain(company_name)
     
     if domain:
         print(f"Success: {domain}")
-        base_url = resolver.get_base_url(domain)
-        career_page = CareerPageParser.discover_career_page(base_url)
-        if career_page:
-            print(f"Career Page Discovered: {career_page}")
+        career_page_result = strategy.discover_portal(company_name, base_domain=domain)
+        if career_page_result:
+            print(f"Career Page Discovered: {career_page_result.portal_url}")
         else:
             print("Failed to discover career page.")
     else:

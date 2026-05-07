@@ -1,7 +1,6 @@
 import uvicorn
 import argparse
 import logging
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

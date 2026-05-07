@@ -1,24 +1,33 @@
 import logging
 import sys
-import os
+from pathlib import Path
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+src_path = Path(__file__).parent.parent / "src"
+if str(src_path) not in sys.path:
+    sys.path.append(str(src_path))
 
-from utils.career_page_parser import CareerPageParser
+from vanguard.discovery.strategies.heuristics import HeuristicStrategy
+import pytest
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
-def test_discovery(base_url: str, job_title: str = None):
-    print(f"\n--- Testing Discovery for: {base_url} ---")
-    discovered = CareerPageParser.discover_career_page(base_url)
+@pytest.mark.parametrize("company_name, job_title", [
+    ("Veeva Systems", "Operations Manager"),
+    ("OpenAI", "Software Engineer"),
+    ("Anthropic", "Product Manager"),
+    ("Cloudflare", "Systems Engineer")
+])
+def test_discovery(company_name: str, job_title: str) -> None:
+    print(f"\n--- Testing Discovery for: {company_name} ---")
+    strategy = HeuristicStrategy()
+    discovered = strategy.discover_portal(company_name)
     if discovered:
-        print(f"SUCCESS (Portal): {discovered}")
+        print(f"SUCCESS (Portal): {discovered.portal_url}")
         if job_title:
             print(f"Searching for deep link: '{job_title}'")
-            parser = CareerPageParser(discovered)
-            deep_link = parser.find_deep_link(job_title)
+            deep_link = strategy.find_job_link(discovered.portal_url, job_title)
             if deep_link:
                 print(f"SUCCESS (Deep Link): {deep_link}")
             else:
@@ -28,10 +37,10 @@ def test_discovery(base_url: str, job_title: str = None):
 
 if __name__ == "__main__":
     test_cases = [
-        ("https://veeva.com", "Operations Manager"),
-        ("https://openai.com", "Software Engineer"),
-        ("https://anthropic.com", "Product Manager"),
-        ("https://cloudflare.com", "Systems Engineer")
+        ("Veeva Systems", "Operations Manager"),
+        ("OpenAI", "Software Engineer"),
+        ("Anthropic", "Product Manager"),
+        ("Cloudflare", "Systems Engineer")
     ]
-    for url, title in test_cases:
-        test_discovery(url, title)
+    for name, title in test_cases:
+        test_discovery(name, title)

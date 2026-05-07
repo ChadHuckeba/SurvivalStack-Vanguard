@@ -1,19 +1,18 @@
 from base_scout import BaseScout
-import logging
 
-class JobSearchScout(BaseScout):
+class JobSearchScout(BaseScout):  # type: ignore[misc]
     """
     JobSearchScout for automated lead retrieval.
     Inherits from BaseScout for hub-and-spoke standardization.
     """
     
-    def __init__(self, target_source: str):
+    def __init__(self, target_source: str) -> None:
         """
         Initialize the JobSearchScout with its unique domain.
         """
         super().__init__(scout_name="JobSearchScout", target_source=target_source)
 
-    def run(self):
+    def run(self) -> None:
         """
         Primary execution loop for job lead retrieval.
         Alpha: Mock implementation for verification.

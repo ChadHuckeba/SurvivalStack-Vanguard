@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 # Add src to python path if needed
@@ -7,10 +6,10 @@ src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.append(str(src_path))
 
-from scout_core import core_engine
-from job_search_scout import JobSearchScout
+from scout_core import core_engine  # noqa: E402
+from job_search_scout import JobSearchScout  # noqa: E402
 
-def main():
+def test_scout_flow() -> None:
     print("Testing Vanguard Core and JobSearchScout...")
     
     # Initialize Scout
@@ -21,24 +20,19 @@ def main():
     
     print("\nExecution complete. Checking state...")
     
-    # Check state
-    state = core_engine.state
-    print(f"Total records in state: {state['state_metadata']['total_records']}")
+    # Check state via DAOs instead of legacy .state property
+    leads = core_engine.leads.list_leads()
+    print(f"Total records in state: {len(leads)}")
     
-    for v_id, entity in state['entities'].items():
-        print(f"\n--- Entity: {v_id[:8]} ---")
+    for lead in leads:
+        print(f"\n--- Entity: {lead.vanguard_id[:8]} ---")
         
-        # Robust handling of different schemas
-        if "content" in entity:
-            title = entity["content"].get("title", "Unknown")
-            source = entity["source_info"].get("source_url", "Unknown")
-        else:
-            title = entity.get("label", "Unknown")
-            source = entity.get("source", "Unknown")
+        # Robust handling using Pydantic fields
+        title = lead.content.title if lead.content else "Unknown"
+        source = lead.source_info.source_url if lead.source_info else "Unknown"
             
         print(f"Label/Title: {title}")
         print(f"Source: {source}")
-        print(f"Hit Count: {entity['metadata'].get('hit_count', 0)}")
 
 if __name__ == "__main__":
-    main()
+    test_scout_flow()
