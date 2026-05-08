@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -51,18 +51,16 @@ async def get_leads() -> Any:
         leads = core_engine.leads.list_leads()
         return leads
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to fetch leads: {str(e)}")
+        return JSONResponse(content={"error": str(e)}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @app.get("/api/stats")
 async def get_stats() -> Any:
-    """Returns basic stats about the ingested leads."""
+    """Returns basic stats about the ingested leads using optimized DAO aggregates."""
     try:
-        leads = core_engine.leads.list_leads()
-        stats: Dict[str, Any] = {"total_leads": len(leads), "providers": {}}
-        for lead in leads:
-            provider = lead.source_info.scout
-            stats["providers"][provider] = stats["providers"].get(provider, 0) + 1
+        stats = core_engine.leads.get_stats()
         return stats
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to fetch stats: {str(e)}")
+        return JSONResponse(content={"error": str(e)}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

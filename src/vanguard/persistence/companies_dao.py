@@ -21,6 +21,14 @@ class CompaniesDAO(BaseDAO):
                 return Company(**res)
         return None
 
+    def delete_company(self, company_name: str) -> bool:
+        """Removes a company from the registry."""
+        query = "DELETE FROM companies WHERE company_name = ?"
+        with self.engine.get_connection() as conn:
+            conn.execute(query, (company_name,))
+            conn.commit()
+            return True
+
     def upsert_company(self, company: Company) -> bool:
         """Adds or updates a company in the registry."""
         data = company.model_dump()

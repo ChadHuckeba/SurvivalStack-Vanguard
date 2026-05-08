@@ -51,8 +51,21 @@ class ScoutCore:
         self.data_dir.mkdir(exist_ok=True)
         (self.root_dir / "logs").mkdir(exist_ok=True)
 
+        # Configure Logging (File + Stream)
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        
+        # Reset any existing handlers
+        root_logger = logging.getLogger()
+        if root_logger.hasHandlers():
+            root_logger.handlers.clear()
+            
         logging.basicConfig(
-            filename=self.log_path, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+            level=logging.INFO,
+            format=log_format,
+            handlers=[
+                logging.FileHandler(self.log_path),
+                logging.StreamHandler(sys.stdout)
+            ]
         )
 
         # Initialize Persistence Engine
@@ -93,6 +106,10 @@ class ScoutCore:
             if isinstance(record_data, Lead):
                 lead = record_data
             else:
+                # Pre-flight check for minimal required fields
+                if not record_data.get("title") or not record_data.get("company"):
+                    raise ValueError("Payload missing required 'title' or 'company' fields.")
+                
                 lead = Lead(**record_data)
 
             # 2. Handoff to persistence (using validated model)

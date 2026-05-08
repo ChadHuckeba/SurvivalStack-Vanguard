@@ -28,10 +28,14 @@ class DiscoveryOrchestrator:
             cached = self.companies.get_company(company_name)
             if cached:
                 # Continuous Validation: check if cached identity or URL is now blocked
-                if is_blocked_entity(cached.company_name) or is_blocked_entity(cached.career_url) or is_blocked_entity(cached.root_domain):
+                if (
+                    is_blocked_entity(cached.company_name)
+                    or is_blocked_entity(cached.career_url)
+                    or is_blocked_entity(cached.root_domain)
+                ):
                     logger.warning(f"Purging contaminated registry entry for {company_name}: {cached.career_url}")
+                    self.companies.delete_company(company_name)
                     # Force re-discovery by falling through
-                    pass
                 elif cached.career_url:
                     return cached
 
