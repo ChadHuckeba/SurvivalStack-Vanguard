@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 from typing import Any
-from scout_core import core_engine
+from vanguard.core import core_engine
 from vanguard.models.lead import Lead, SourceInfo, LeadContent
 
 

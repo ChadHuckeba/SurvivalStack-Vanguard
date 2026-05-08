@@ -1,7 +1,7 @@
-from base_scout import BaseScout
+from .base import BaseScout
 
 
-class JobSearchScout(BaseScout):  # type: ignore[misc]
+class JobSearchScout(BaseScout):
     """
     JobSearchScout for automated lead retrieval.
     Inherits from BaseScout for hub-and-spoke standardization.

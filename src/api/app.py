@@ -17,7 +17,7 @@ logger = logging.getLogger("vanguard.api")
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(ROOT_DIR / "src"))
 
-from scout_core import core_engine  # noqa: E402
+from vanguard.core import core_engine  # noqa: E402
 
 app = FastAPI(title="Vanguard Lens Dashboard")
 

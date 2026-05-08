@@ -1,12 +1,13 @@
 import time
 import random
-from base_scout import BaseScout
 import logging
-import yaml  # type: ignore
 import os
 from pathlib import Path
 from typing import Optional, Any
 from dotenv import load_dotenv
+import yaml  # type: ignore
+
+from .base import BaseScout
 
 # Load environment variables (USER_HOME_LOCATION)
 load_dotenv()
@@ -18,7 +19,7 @@ except ImportError:
     scrape_jobs = None
 
 
-class JobSpyScout(BaseScout):  # type: ignore[misc]
+class JobSpyScout(BaseScout):
     """
     JobSpyScout wraps the JobSpy library to act as a Vanguard Research Bridge.
     It implements prioritized location logic and relocation heuristics based on YAML config.
@@ -31,7 +32,7 @@ class JobSpyScout(BaseScout):  # type: ignore[misc]
         super().__init__(scout_name="JobSpyScout", target_source="https://github.com/speedyapply/JobSpy")
 
         # Load Configuration
-        self.root_dir = Path(__file__).parent.parent
+        self.root_dir = Path(__file__).parent.parent.parent.parent
         resolved_config_path = config_path or self.root_dir / "config" / "scouts" / "jobspy.yaml"
         with open(resolved_config_path, "r") as f:
             self.settings = yaml.safe_load(f)

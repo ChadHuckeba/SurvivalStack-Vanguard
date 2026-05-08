@@ -32,11 +32,7 @@ class LeadsDAO(BaseDAO):
                 status=res.get("career_extraction_status"),
                 error=res.get("career_error_log"),
             ),
-            metadata=Metadata(
-                first_seen=res["first_seen"], 
-                last_seen=res["last_seen"], 
-                hit_count=res["hit_count"]
-            ),
+            metadata=Metadata(first_seen=res["first_seen"], last_seen=res["last_seen"], hit_count=res["hit_count"]),
             status=res["status"],
         )
 
@@ -56,24 +52,22 @@ class LeadsDAO(BaseDAO):
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns optimized database statistics using SQL aggregates."""
-        stats: Dict[str, Any] = {
-            "total_leads": 0,
-            "providers": {},
-            "extraction_status": {}
-        }
-        
+        stats: Dict[str, Any] = {"total_leads": 0, "providers": {}, "extraction_status": {}}
+
         with self.engine.get_connection() as conn:
             # 1. Total Count
             stats["total_leads"] = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
-            
+
             # 2. Provider Distribution
             for row in conn.execute("SELECT provider_id, COUNT(*) FROM entries GROUP BY provider_id"):
                 stats["providers"][row[0]] = row[1]
-                
+
             # 3. Status Distribution
-            for row in conn.execute("SELECT career_extraction_status, COUNT(*) FROM entries GROUP BY career_extraction_status"):
+            for row in conn.execute(
+                "SELECT career_extraction_status, COUNT(*) FROM entries GROUP BY career_extraction_status"
+            ):
                 stats["extraction_status"][row[0] or "unknown"] = row[1]
-                
+
         return stats
 
     def upsert_lead(self, lead: Lead) -> bool:

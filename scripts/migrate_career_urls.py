@@ -6,7 +6,7 @@ import re
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from scout_core import core_engine
+from vanguard.core import core_engine
 from vanguard.discovery.orchestrator import DiscoveryOrchestrator
 
 # Configure logging

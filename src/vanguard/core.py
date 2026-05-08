@@ -37,7 +37,7 @@ class ScoutCore:
         Initialize the system environment and load the persistent state.
         Ensures the local infrastructure exists for agnostic data storage.
         """
-        self.root_dir = Path(__file__).parent.parent
+        self.root_dir = Path(__file__).parent.parent.parent
         self.data_dir = self.root_dir / "data"
         self.db_path = self.data_dir / "vanguard.db"
         self.log_path = self.root_dir / "logs" / "system.log"
@@ -51,22 +51,20 @@ class ScoutCore:
         self.data_dir.mkdir(exist_ok=True)
         (self.root_dir / "logs").mkdir(exist_ok=True)
 
-        # Configure Logging (File + Stream)
+        # Configure Named Logger (vanguard)
         log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        
-        # Reset any existing handlers
-        root_logger = logging.getLogger()
-        if root_logger.hasHandlers():
-            root_logger.handlers.clear()
-            
-        logging.basicConfig(
-            level=logging.INFO,
-            format=log_format,
-            handlers=[
-                logging.FileHandler(self.log_path),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
+        self.logger = logging.getLogger("vanguard")
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False  # Don't send to root logger to avoid uvicorn duplicates
+
+        if not self.logger.handlers:
+            fh = logging.FileHandler(self.log_path)
+            fh.setFormatter(logging.Formatter(log_format))
+            self.logger.addHandler(fh)
+
+            sh = logging.StreamHandler(sys.stdout)
+            sh.setFormatter(logging.Formatter(log_format))
+            self.logger.addHandler(sh)
 
         # Initialize Persistence Engine
         self.engine = SQLiteEngine(self.db_path)
@@ -109,14 +107,14 @@ class ScoutCore:
                 # Pre-flight check for minimal required fields
                 if not record_data.get("title") or not record_data.get("company"):
                     raise ValueError("Payload missing required 'title' or 'company' fields.")
-                
+
                 lead = Lead(**record_data)
 
             # 2. Handoff to persistence (using validated model)
             self.leads.upsert_lead(lead)
 
         except Exception as e:
-            logging.error(f"Ingestion failed for lead: {str(e)}")
+            self.logger.error(f"Ingestion failed for lead: {str(e)}")
             raise ValueError(f"Payload validation failed: {str(e)}")
 
 
