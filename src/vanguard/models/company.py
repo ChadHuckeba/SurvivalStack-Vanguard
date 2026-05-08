@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from .discovery import is_blocked_url
+from .discovery import is_blocked_entity
 
 
 class Company(BaseModel):
@@ -11,9 +11,9 @@ class Company(BaseModel):
     ats_provider: Optional[str] = None
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
-    @field_validator("root_domain", "career_url")
+    @field_validator("company_name", "root_domain", "career_url")
     @classmethod
     def check_not_blocked(cls, v: Optional[str]) -> Optional[str]:
-        if v and is_blocked_url(v):
-            raise ValueError(f"Domain or URL matches a blocked aggregator: {v}")
+        if v and is_blocked_entity(v):
+            raise ValueError(f"Entity identity matches a blocked aggregator: {v}")
         return v

@@ -3,24 +3,25 @@ from pydantic import BaseModel, field_validator
 
 
 # Centralized list of job aggregators and third-party boards to block from official discovery
+# We use lowercase keywords to catch both domains and company names
 GLOBAL_AGGREGATOR_BLOCKLIST: List[str] = [
-    "jooble.org",
-    "lensa.com",
-    "swooped.co",
-    "monster.com",
-    "dice.com",
+    "jooble",
+    "lensa",
+    "swooped",
+    "monster",
+    "dice.com",  # Using .com for dice to avoid blocking companies that might just have 'dice' in name
     "salary.com",
     "levels.fyi",
-    "swooped.app",  # Added to catch the Swooped app variant
+    "ziprecruiter",
 ]
 
 
-def is_blocked_url(url: str) -> bool:
-    """Utility to check if a URL belongs to a blocked aggregator."""
-    if not url:
+def is_blocked_entity(identity: str) -> bool:
+    """Utility to check if a URL or Name belongs to a blocked aggregator."""
+    if not identity:
         return False
-    url_lower = url.lower()
-    return any(blocked in url_lower for blocked in GLOBAL_AGGREGATOR_BLOCKLIST)
+    identity_lower = identity.lower()
+    return any(blocked in identity_lower for blocked in GLOBAL_AGGREGATOR_BLOCKLIST)
 
 
 class DiscoveryResult(BaseModel):
@@ -34,6 +35,6 @@ class DiscoveryResult(BaseModel):
     @field_validator("portal_url", "deep_link")
     @classmethod
     def check_not_blocked(cls, v: Optional[str]) -> Optional[str]:
-        if v and is_blocked_url(v):
-            raise ValueError(f"URL matches a blocked aggregator domain: {v}")
+        if v and is_blocked_entity(v):
+            raise ValueError(f"URL matches a blocked aggregator: {v}")
         return v
