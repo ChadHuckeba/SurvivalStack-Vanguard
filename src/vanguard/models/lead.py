@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from .discovery import is_blocked_url
+from .discovery import is_blocked_entity
 
 
 class SourceInfo(BaseModel):
@@ -24,7 +24,7 @@ class CareerInfo(BaseModel):
     @field_validator("url")
     @classmethod
     def check_not_blocked(cls, v: Optional[str]) -> Optional[str]:
-        if v and is_blocked_url(v):
+        if v and is_blocked_entity(v):
             raise ValueError(f"Career URL matches a blocked aggregator: {v}")
         return v
 
@@ -52,9 +52,11 @@ class LeadContent(BaseModel):
 
     @field_validator("company")
     @classmethod
-    def company_not_unknown(cls, v: str) -> str:
+    def company_not_blocked(cls, v: str) -> str:
         if "unknown company" in v.lower():
             raise ValueError("Company cannot be 'Unknown Company'")
+        if is_blocked_entity(v):
+            raise ValueError(f"Company identity matches a blocked aggregator: {v}")
         return v
 
 

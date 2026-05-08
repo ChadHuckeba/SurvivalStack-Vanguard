@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 from ddgs import DDGS
-from vanguard.models.discovery import DiscoveryResult, is_blocked_url
+from vanguard.models.discovery import DiscoveryResult, is_blocked_entity
 from ..base_strategy import BaseDiscoveryStrategy
 
 logger = logging.getLogger("vanguard.discovery.heuristics")
@@ -72,7 +72,7 @@ class HeuristicStrategy(BaseDiscoveryStrategy):
                 domain = ".".join(domain_parts[-2:]) if len(domain_parts) >= 2 else domain_parts[0]
 
                 # Check Centralized Blocklist
-                if is_blocked_url(url):
+                if is_blocked_entity(url):
                     logger.warning(f"Skipping blocked aggregator domain: {domain}")
                     continue
 
