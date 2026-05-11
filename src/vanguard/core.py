@@ -1,3 +1,4 @@
+from cairn import Cairn
 from typing import Any, Dict, Union
 import hashlib
 import logging
@@ -42,6 +43,12 @@ class ScoutCore:
         self.db_path = self.data_dir / "vanguard.db"
         self.log_path = self.root_dir / "logs" / "system.log"
         self.migrations_dir = self.root_dir / "src" / "vanguard" / "persistence" / "migrations"
+        # Initialize Cairn Logging Authority
+        Cairn.initialize(
+            project_name="vanguard",
+            log_file=str(self.log_path)
+        )
+
 
         # Add src to path for relative imports
         src_path = str(self.root_dir / "src")
