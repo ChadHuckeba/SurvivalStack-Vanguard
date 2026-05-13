@@ -1,0 +1,20 @@
+# This is a provisioning template. Do not edit directly — modify the source in Core-dotfiles.
+name: "Governance: Link to Project Board"
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+  pull_request:
+    types: [opened, labeled, reopened]
+
+jobs:
+  add-to-project:
+    name: Link to Board
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add to Project Board
+        uses: actions/add-to-project@v1
+        with:
+          # This URL is explicitly injected during repository provisioning
+          project-url: "https://github.com/users/ChadHuckeba/projects/2"
+          github-token: ${{ secrets.PROVISIONING_TOKEN }}
