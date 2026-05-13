@@ -1,4 +1,4 @@
-# Vanguard
+# Vanguard®
 
 Vanguard is an automated intelligence and data acquisition platform designed to identify high-fidelity Entries within high-entropy environments. By leveraging the ScoutCore service layer, Vanguard processes raw discoveries through Multi-Vector Data Validation (MVDV) and Semantic Alignment to ensure data integrity and relevance.
 
