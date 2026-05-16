@@ -4,8 +4,6 @@ name: "Governance: Link to Project Board"
 on:
   issues:
     types: [opened, labeled, reopened]
-  pull_request:
-    types: [opened, labeled, reopened]
 
 jobs:
   add-to-project:
